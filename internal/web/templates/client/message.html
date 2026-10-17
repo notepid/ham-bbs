@@ -1,0 +1,27 @@
+{{define "content"}}{{with .Data}}{{$m := .M}}
+<h1>{{$m.Subject}}</h1>
+<div class="panel">
+<dl class="msghead">
+  <dt>From</dt><dd>{{$m.From}}</dd>
+  <dt>To</dt><dd>{{$m.To}}</dd>
+  <dt>Date</dt><dd>{{date $m.Created}}</dd>
+  {{if $m.Path}}<dt>Path</dt><dd>{{join $m.Path " → "}}</dd>{{end}}
+</dl>
+{{if $m.HasBody}}
+<pre class="body">{{$m.Body}}</pre>
+{{else}}
+<p>Only the header has been downloaded ({{bytes $m.Size}}).</p>
+{{if .Wanted}}<p class="muted">The text will be fetched on the next sync.</p>
+{{else}}<form method="post" action="/msg/{{$m.ID}}/want"><button>Fetch text on next sync</button></form>{{end}}
+{{end}}
+</div>
+<div class="actions">
+  {{if eq $m.Kind "P"}}
+  <a class="button" href="/compose?kind=P&amp;to={{urlquery $m.From}}&amp;subject={{urlquery (printf "Re: %s" $m.Subject)}}">Reply</a>
+  {{else}}
+  <a class="button" href="/compose?kind=P&amp;to={{urlquery $m.From}}&amp;subject={{urlquery (printf "Re: %s" $m.Subject)}}">Reply privately</a>
+  <a class="button secondary" href="/compose?kind=B&amp;to={{urlquery (addrname $m.To)}}&amp;subject={{urlquery (printf "Re: %s" $m.Subject)}}">Reply in {{addrname $m.To}}</a>
+  {{end}}
+  <form method="post" action="/msg/{{$m.ID}}/unread" class="inline"><button class="secondary">Mark unread</button></form>
+</div>
+{{end}}{{end}}

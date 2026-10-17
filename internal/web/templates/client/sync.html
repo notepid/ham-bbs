@@ -1,0 +1,26 @@
+{{define "content"}}
+<h1>Sync</h1>
+{{if .Header.Syncing}}
+<div class="panel"><span class="spinner"></span> Talking to {{.Header.Server}}… this page refreshes by itself.</div>
+{{end}}
+{{with .Data}}
+<div class="panel {{if .Err}}error{{else}}flash{{end}}">
+  <b>{{if .Err}}Last sync failed{{else}}Last sync OK{{end}}</b> <span class="muted">{{date .Started}}, {{.Duration}}, with {{.Server}}</span>
+  {{if .Err}}<p>{{.Err}}</p>{{end}}
+</div>
+{{if not .Err}}
+<div class="stats">
+  <div class="stat"><b>{{.Uploaded}}</b><span>sent</span></div>
+  <div class="stat"><b>{{.NewBodies}}</b><span>messages received</span></div>
+  <div class="stat"><b>{{.NewHeaders}}</b><span>headers received</span></div>
+  <div class="stat"><b>{{bytes .BytesOut}} / {{bytes .BytesIn}}</b><span>bytes out / in</span></div>
+</div>
+{{if .Registered}}<div class="panel flash">Your account was created on the BBS.</div>{{end}}
+{{if .MOTD}}<div class="panel"><b>Message of the day</b><pre class="body">{{.MOTD}}</pre></div>{{end}}
+{{if .More}}<div class="panel">There is more waiting. Sync again to continue.</div>{{end}}
+{{range .Rejected}}<div class="panel error">Message {{.ID}} rejected: {{.Reason}}</div>{{end}}
+{{end}}
+{{else}}
+{{if not .Header.Syncing}}<p class="muted">No sync yet in this session.</p>{{end}}
+{{end}}
+{{end}}

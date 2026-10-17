@@ -1,0 +1,32 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{if and (eq .Active "sync") .Header.Syncing}}<meta http-equiv="refresh" content="2">{{end}}
+<title>{{.Title}} · HamBBS</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header><div class="bar">
+  <span class="brand">HamBBS <small>{{or .Header.Callsign "not set up"}}</small></span>
+  <nav>
+    <a href="/" {{if eq .Active "inbox"}}class="on"{{end}}>Inbox{{if .Header.UnreadPersonal}}<span class="badge">{{.Header.UnreadPersonal}}</span>{{end}}</a>
+    <a href="/bulletins" {{if eq .Active "bull"}}class="on"{{end}}>Bulletins{{if .Header.UnreadBulletin}}<span class="badge">{{.Header.UnreadBulletin}}</span>{{end}}</a>
+    <a href="/compose" {{if eq .Active "compose"}}class="on"{{end}}>Write</a>
+    <a href="/outbox" {{if eq .Active "outbox"}}class="on"{{end}}>Outbox{{if .Header.Queued}}<span class="badge">{{.Header.Queued}}</span>{{end}}</a>
+    <a href="/settings" {{if eq .Active "settings"}}class="on"{{end}}>Settings</a>
+  </nav>
+  {{if .Header.Configured}}
+  <form method="post" action="/sync" class="inline">
+    <button {{if .Header.Syncing}}disabled{{end}}>{{if .Header.Syncing}}<span class="spinner"></span> Syncing…{{else}}Sync now{{end}}</button>
+  </form>
+  {{end}}
+</div></header>
+<main>
+{{if .Flash}}<div class="panel flash">{{.Flash}}</div>{{end}}
+{{if .Error}}<div class="panel error">{{.Error}}</div>{{end}}
+{{template "content" .}}
+</main>
+</body>
+</html>{{end}}

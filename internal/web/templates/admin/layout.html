@@ -1,0 +1,24 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · {{.Header.Node}} admin</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header><div class="bar">
+  <span class="brand">{{.Header.Node}} <small>HamBBS admin</small></span>
+  <nav>
+    <a href="/" {{if eq .Active "dash"}}class="on"{{end}}>Dashboard</a>
+    <a href="/users" {{if eq .Active "users"}}class="on"{{end}}>Users</a>
+    <a href="/messages" {{if eq .Active "msgs"}}class="on"{{end}}>Messages</a>
+  </nav>
+</div></header>
+<main>
+{{if .Flash}}<div class="panel flash">{{.Flash}}</div>{{end}}
+{{if .Error}}<div class="panel error">{{.Error}}</div>{{end}}
+{{template "content" .}}
+</main>
+</body>
+</html>{{end}}

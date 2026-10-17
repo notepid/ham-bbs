@@ -1,0 +1,44 @@
+{{define "content"}}{{with .Data}}
+<h1>Settings</h1>
+<form method="post" action="/settings" class="panel">
+  <div class="row">
+    <div>
+      <label for="callsign">Your callsign</label>
+      <input type="text" id="callsign" name="callsign" value="{{.Callsign}}" required>
+    </div>
+    <div>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="{{if .Key}}unchanged{{else}}choose one{{end}}">
+      <p class="hint">New users: choose any password; your first sync creates the account. The password never goes over the air, only a signature proving you know it.</p>
+    </div>
+  </div>
+  <label for="transport">Connection</label>
+  <select id="transport" name="transport">
+    <option value="tcp" {{if ne .Transport "vara"}}selected{{end}}>Internet / HamNet (TCP/IP)</option>
+    <option value="vara" {{if eq .Transport "vara"}}selected{{end}}>Radio via VARA modem (VARA FM/HF, VardeFM)</option>
+  </select>
+  <div class="row">
+    <div>
+      <label for="address">BBS address</label>
+      <input type="text" id="address" name="address" value="{{.Address}}" required>
+      <p class="hint">TCP/IP: host:port, e.g. <code>bbs.example.org:6300</code>. Radio: the BBS callsign, e.g. <code>LA1ABC</code>.</p>
+    </div>
+    <div>
+      <label for="vara_addr">VARA modem</label>
+      <input type="text" id="vara_addr" name="vara_addr" value="{{.VaraAddr}}">
+      <p class="hint">Radio only: the modem's command port, normally <code>127.0.0.1:8300</code>.</p>
+    </div>
+  </div>
+
+  <h2>What to download</h2>
+  <label class="check"><input type="checkbox" name="fetch_personal" {{if .FetchPersonal}}checked{{end}}> Always fetch the full text of personal mail</label>
+  <label for="areas">Bulletin areas to follow</label>
+  <input type="text" id="areas" name="areas" value="{{join .Areas ", "}}">
+  <p class="hint">Comma separated, e.g. <code>LOCAL, TECH</code>. Empty = all areas.</p>
+  <label for="fetch_areas">Always fetch full text for these areas</label>
+  <input type="text" id="fetch_areas" name="fetch_areas" value="{{join .FetchAreas ", "}}">
+  <p class="hint">Other bulletins arrive as headers and you pick which to download. Use <code>*</code> for all. On slow links, keep this list short.</p>
+  <div class="actions"><button>Save</button></div>
+</form>
+<p class="muted">Settings file: {{.Path}}</p>
+{{end}}{{end}}

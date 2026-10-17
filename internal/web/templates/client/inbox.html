@@ -1,0 +1,13 @@
+{{define "content"}}
+<h1>Inbox</h1>
+<div class="wrap"><table>
+<tr><th>From</th><th>Subject</th><th class="hide-sm">Date</th><th class="num hide-sm">Size</th></tr>
+{{range .Data}}
+<tr {{if not .Read}}class="unread"{{end}}>
+  <td>{{.From}}</td>
+  <td><a href="/msg/{{.ID}}">{{.Subject}}</a>{{if not .HasBody}} <span class="pill">header only</span>{{end}}</td>
+  <td class="hide-sm">{{date .Created}}</td><td class="num hide-sm">{{bytes .Size}}</td>
+</tr>
+{{else}}<tr><td colspan="4" class="muted">No mail yet. Press <b>Sync now</b> to check the BBS.</td></tr>{{end}}
+</table></div>
+{{end}}

@@ -1,0 +1,40 @@
+{{define "content"}}
+<h1>Users</h1>
+<div class="wrap"><table>
+<tr><th>Callsign</th><th>Name</th><th>Password</th><th class="hide-sm">Created</th><th>Last seen</th><th></th></tr>
+{{range .Data}}
+<tr>
+  <td><b>{{.Call}}</b>{{if .Admin}} <span class="pill ok">sysop</span>{{end}}</td>
+  <td>{{.Name}}</td>
+  <td>{{if .PubKey}}<span class="pill ok">set</span>{{else}}<span class="pill">none</span>{{end}}</td>
+  <td class="hide-sm">{{date .Created}}</td>
+  <td>{{date .LastSeen}}</td>
+  <td>
+    <details><summary class="muted">manage</summary>
+      <form method="post" action="/users/{{.Call}}/password" class="actions">
+        <input type="password" name="password" placeholder="new password (empty = let next login set it)">
+        <button class="small">Set password</button>
+      </form>
+      <div class="actions">
+        <form method="post" action="/users/{{.Call}}/admin" class="inline"><button class="small secondary">{{if .Admin}}Remove sysop{{else}}Make sysop{{end}}</button></form>
+        <form method="post" action="/users/{{.Call}}/delete" class="inline" onsubmit="return confirm('Delete {{.Call}}?')"><button class="small danger">Delete</button></form>
+      </div>
+    </details>
+  </td>
+</tr>
+{{else}}<tr><td colspan="6" class="muted">No users yet. With open registration, users appear when they first sync.</td></tr>{{end}}
+</table></div>
+
+<h2>Add user</h2>
+<form method="post" action="/users" class="panel">
+  <div class="row">
+    <div><label for="call">Callsign</label><input type="text" id="call" name="call" required></div>
+    <div><label for="name">Name</label><input type="text" id="name" name="name"></div>
+  </div>
+  <label for="pw">Password</label>
+  <input type="password" id="pw" name="password">
+  <p class="hint">Leave empty to let the user's first client login set it. Only a key derived from the password is stored.</p>
+  <label class="check"><input type="checkbox" name="admin"> Sysop (may delete any message)</label>
+  <div class="actions"><button>Add user</button></div>
+</form>
+{{end}}

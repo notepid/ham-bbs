@@ -1,0 +1,15 @@
+{{define "content"}}
+<h1>Outbox</h1>
+<div class="wrap"><table>
+<tr><th>Status</th><th>To</th><th>Subject</th><th class="hide-sm">Written</th><th></th></tr>
+{{range .Data}}
+<tr>
+  <td>{{if eq .Status "sent"}}<span class="pill ok">sent</span>{{else if eq .Status "rejected"}}<span class="pill bad">rejected</span>{{else}}<span class="pill">queued</span>{{end}}</td>
+  <td>{{.To}}</td>
+  <td>{{.Subject}}{{if .Reason}}<div class="hint">{{.Reason}}</div>{{end}}</td>
+  <td class="hide-sm">{{date .Created}}</td>
+  <td>{{if ne .Status "sent"}}<form method="post" action="/outbox/{{.ID}}/delete" class="inline"><button class="small danger">Remove</button></form>{{end}}</td>
+</tr>
+{{else}}<tr><td colspan="5" class="muted">Nothing here.</td></tr>{{end}}
+</table></div>
+{{end}}

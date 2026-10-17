@@ -1,0 +1,18 @@
+{{define "content"}}{{with .Data}}
+<h1>{{.Subject}}</h1>
+<div class="panel">
+<dl class="msghead">
+  <dt>Type</dt><dd>{{kindname .Kind}} #{{.Seq}} <span class="muted">({{.ID}})</span></dd>
+  <dt>From</dt><dd>{{.From}}</dd>
+  <dt>To</dt><dd>{{.To}}</dd>
+  <dt>Date</dt><dd>{{date .Created}}</dd>
+  {{if .Expires}}<dt>Expires</dt><dd>{{date .Expires}}</dd>{{end}}
+  <dt>Path</dt><dd>{{join .Path " → "}}</dd>
+</dl>
+<pre class="body">{{.Body}}</pre>
+</div>
+<form method="post" action="/messages/{{.ID}}/delete" onsubmit="return confirm('Delete this message?')" class="actions">
+  <a class="button secondary" href="/messages">Back</a>
+  <button class="danger">Delete</button>
+</form>
+{{end}}{{end}}

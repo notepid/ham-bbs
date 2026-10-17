@@ -1,0 +1,26 @@
+{{define "content"}}{{with .Data}}
+<h1>Write</h1>
+<form method="post" action="/compose" class="panel">
+  <div class="row">
+    <div>
+      <label for="kind">Type</label>
+      <select id="kind" name="kind">
+        <option value="P" {{if eq .Kind "P"}}selected{{end}}>Personal message</option>
+        <option value="B" {{if eq .Kind "B"}}selected{{end}}>Bulletin</option>
+      </select>
+    </div>
+    <div>
+      <label for="to">To</label>
+      <input type="text" id="to" name="to" value="{{.To}}" list="areas" required autocomplete="off">
+      <datalist id="areas">{{range .Areas}}<option value="{{.Name}}">{{end}}</datalist>
+      <p class="hint">Personal: a callsign, e.g. LA1ABC. Bulletin: an area, e.g. TECH.</p>
+    </div>
+  </div>
+  <label for="subject">Subject</label>
+  <input type="text" id="subject" name="subject" value="{{.Subject}}" maxlength="80" required>
+  <label for="body">Message</label>
+  <textarea id="body" name="body">{{.Body}}</textarea>
+  <p class="hint">Remember: everything sent over amateur radio is public. No business traffic, no encryption, nothing that hides the meaning.</p>
+  <div class="actions"><button>Put in outbox</button></div>
+</form>
+{{end}}{{end}}

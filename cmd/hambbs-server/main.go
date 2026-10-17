@@ -1,0 +1,164 @@
+// Command hambbs-server runs a HamBBS node.
+//
+//	hambbs-server                  start (runs the setup wizard on first start)
+//	hambbs-server -init            run the setup wizard again
+//	hambbs-server -set-admin-password
+package main
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"io/fs"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"strings"
+	"syscall"
+	"time"
+
+	"golang.org/x/term"
+
+	"hambbs/internal/bbs"
+	"hambbs/internal/config"
+	"hambbs/internal/store"
+	"hambbs/internal/transport/tcp"
+	"hambbs/internal/transport/vara"
+	"hambbs/internal/web"
+)
+
+func main() {
+	cfgPath := flag.String("config", "hambbs.toml", "configuration file")
+	initCfg := flag.Bool("init", false, "run the setup wizard and write the configuration file")
+	setPW := flag.Bool("set-admin-password", false, "set the admin web UI password")
+	flag.Parse()
+
+	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	if err := run(*cfgPath, *initCfg, *setPW, log); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
+	}
+}
+
+func interactive() bool {
+	return term.IsTerminal(int(os.Stdin.Fd()))
+}
+
+func run(cfgPath string, initCfg, setPW bool, log *slog.Logger) error {
+	_, statErr := os.Stat(cfgPath)
+	if initCfg || errors.Is(statErr, fs.ErrNotExist) {
+		if !interactive() {
+			return fmt.Errorf("%s not found; run hambbs-server -init in a terminal to create it", cfgPath)
+		}
+		c, err := config.Wizard(os.Stdin, os.Stdout)
+		if err != nil {
+			return err
+		}
+		if err := config.SaveServer(cfgPath, c); err != nil {
+			return err
+		}
+		abs, _ := filepath.Abs(cfgPath)
+		fmt.Printf("\nSaved %s. Edit it any time; restart to apply.\n\n", abs)
+	}
+
+	cfg, err := config.LoadServer(cfgPath)
+	if err != nil {
+		return fmt.Errorf("%s: %w", cfgPath, err)
+	}
+
+	if setPW {
+		fmt.Print("New admin password: ")
+		pw, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Println()
+		if err != nil {
+			return err
+		}
+		if cfg.Admin.PasswordHash, err = config.HashPassword(strings.TrimSpace(string(pw))); err != nil {
+			return err
+		}
+		if err := config.SaveServer(cfgPath, cfg); err != nil {
+			return err
+		}
+		fmt.Println("Admin password saved. Log in as user \"sysop\".")
+		return nil
+	}
+
+	dbPath := cfg.DataPath("hambbs.db")
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		return err
+	}
+	st, err := store.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open database: %w", err)
+	}
+	defer st.Close()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	srv := bbs.New(cfg, st, log)
+	go srv.Run(ctx)
+
+	log.Info("HamBBS starting", "callsign", cfg.Callsign, "node", cfg.Node, "db", dbPath)
+	if cfg.TCP.Enabled {
+		l, err := tcp.Listen(cfg.TCP.Listen)
+		if err != nil {
+			return fmt.Errorf("tcp listen: %w", err)
+		}
+		defer l.Close()
+		go func() {
+			if err := srv.Serve(l); err != nil && ctx.Err() == nil {
+				log.Error("tcp listener stopped", "err", err)
+			}
+		}()
+	}
+
+	if cfg.VARA.Enabled {
+		l, err := vara.Listen(vara.Config{Addr: cfg.VARA.Addr, MyCalls: cfg.VARA.MyCalls, Log: log})
+		if err != nil {
+			return err
+		}
+		defer l.Close()
+		go func() {
+			if err := srv.Serve(l); err != nil && ctx.Err() == nil {
+				log.Error("vara listener stopped", "err", err)
+			}
+		}()
+	}
+
+	if cfg.Admin.Listen != "" {
+		if cfg.Admin.PasswordHash == "" && !isLoopback(cfg.Admin.Listen) {
+			log.Warn("admin UI is reachable from the network without a password; run hambbs-server -set-admin-password")
+		}
+		hs := &http.Server{Addr: cfg.Admin.Listen, Handler: web.NewAdmin(srv, log), ReadHeaderTimeout: 10 * time.Second}
+		go func() {
+			log.Info("admin UI", "url", "http://"+displayAddr(cfg.Admin.Listen)+"/")
+			if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				log.Error("admin UI stopped", "err", err)
+			}
+		}()
+		defer hs.Shutdown(context.Background())
+	}
+
+	<-ctx.Done()
+	log.Info("shutting down")
+	return nil
+}
+
+func isLoopback(addr string) bool {
+	host := addr
+	if i := strings.LastIndexByte(addr, ':'); i >= 0 {
+		host = addr[:i]
+	}
+	return host == "127.0.0.1" || host == "localhost" || host == "[::1]"
+}
+
+func displayAddr(addr string) string {
+	if strings.HasPrefix(addr, ":") {
+		return "localhost" + addr
+	}
+	return addr
+}

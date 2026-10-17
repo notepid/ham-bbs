@@ -1,0 +1,32 @@
+{{define "content"}}{{with .Data}}
+<h1>{{.Config.Name}}</h1>
+<div class="stats">
+  <div class="stat"><b>{{.Stats.Users}}</b><span>users</span></div>
+  <div class="stat"><b>{{.Stats.Personal}}</b><span>personal messages</span></div>
+  <div class="stat"><b>{{.Stats.Bulletins}}</b><span>bulletins</span></div>
+  <div class="stat"><b>{{len .Sessions}}</b><span>connected now</span></div>
+</div>
+<div class="panel">
+  <div class="muted">Station <b>{{.Config.Callsign}}</b>, node <b>{{.Config.Node}}</b>, up {{.Uptime}}.
+  TCP {{if .Config.TCP.Enabled}}on <code>{{.Config.TCP.Listen}}</code>{{else}}off{{end}}.
+  Registration {{if .Config.OpenRegistration}}open{{else}}closed{{end}}.</div>
+</div>
+
+<h2>Connected</h2>
+{{if .Sessions}}
+<div class="wrap"><table>
+<tr><th>Call</th><th>Mode</th><th>Via</th><th>From</th><th>For</th></tr>
+{{range .Sessions}}<tr><td>{{or .Call "…"}}</td><td>{{.Mode}}</td><td>{{.Transport}}</td><td>{{.Remote}}</td><td>{{ago .Started}}</td></tr>{{end}}
+</table></div>
+{{else}}<p class="muted">Nobody is connected.</p>{{end}}
+
+<h2>Bulletin areas</h2>
+{{if .Areas}}
+<div class="tabs">{{range .Areas}}<a href="/messages?area={{.Name}}">{{.Name}} <span class="muted">{{.Count}}</span></a>{{end}}</div>
+{{else}}<p class="muted">No bulletins yet.</p>{{end}}
+
+<h2>Activity</h2>
+<div class="panel events">
+{{range .Events}}<div><span class="muted">{{date .Time}}</span> {{.Text}}</div>{{else}}<span class="muted">Nothing yet.</span>{{end}}
+</div>
+{{end}}{{end}}

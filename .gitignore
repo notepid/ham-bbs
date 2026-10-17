@@ -1,0 +1,11 @@
+/hambbs-server
+/hambbs-client
+*.exe
+/dist/
+data/
+client-data/
+hambbs.toml
+hambbs-client.toml
+*.db
+*.db-wal
+*.db-shm
