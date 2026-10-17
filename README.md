@@ -83,3 +83,7 @@ the version a binary was built from.
 go test ./...
 GOOS=linux GOARCH=arm64 go build ./cmd/...   # e.g. Raspberry Pi
 ```
+
+## License
+
+GPL-3.0-or-later. See [LICENSE](LICENSE).
