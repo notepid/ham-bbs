@@ -14,6 +14,17 @@
   Registration {{if .Config.OpenRegistration}}open{{else}}closed{{end}}.</div>
 </div>
 
+{{range .Helpers}}
+<div class="panel">
+  <b>{{.Name}}</b>
+  {{if .Running}}<span class="pill ok">running</span> <span class="muted">for {{ago .Since}}{{if .Restarts}}, {{.Restarts}} restart(s){{end}}</span>
+  {{else}}<span class="pill bad">not running</span> <span class="muted">{{.LastExit}}{{if .Restarts}}, {{.Restarts}} restart(s); trying again{{end}}</span>{{end}}
+  <div class="hint"><code>{{.Command}}</code></div>
+  {{if .Output}}<pre class="body events">{{range .Output}}{{.}}
+{{end}}</pre>{{end}}
+</div>
+{{end}}
+
 <h2>Connected</h2>
 {{if .Sessions}}
 <div class="wrap"><table>

@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/notepid/ham-bbs/internal/autorun"
 	"github.com/notepid/ham-bbs/internal/buildinfo"
 	"github.com/notepid/ham-bbs/internal/client"
 	"github.com/notepid/ham-bbs/internal/config"
@@ -69,6 +70,13 @@ func run(cfgPath string, noBrowser, syncOnce bool, log *slog.Logger) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// The modem or TNC, if the user wants the client to start it.
+	helper := autorun.New("modem", log)
+	defer helper.Stop()
+	if err := c.SetHelper(helper); err != nil {
+		log.Error("cannot start the modem/TNC program", "err", err)
+	}
 
 	if syncOnce {
 		rep := c.Sync(ctx)

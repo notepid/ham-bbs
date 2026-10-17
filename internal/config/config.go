@@ -45,6 +45,7 @@ type VARA struct {
 	Enabled bool     `toml:"enabled"`
 	Addr    string   `toml:"addr"`
 	MyCalls []string `toml:"mycalls"`
+	Autorun string   `toml:"autorun"` // command line that starts the modem; empty = started separately
 }
 
 // AX25 connects the BBS to an AX.25 TNC with an AGWPE interface (Direwolf,
@@ -54,6 +55,7 @@ type AX25 struct {
 	Addr    string   `toml:"addr"`
 	Port    int      `toml:"port"`
 	MyCalls []string `toml:"mycalls"`
+	Autorun string   `toml:"autorun"` // command line that starts the TNC; empty = started separately
 }
 
 // Neighbor is another BBS this node forwards messages with. Both nodes
@@ -234,6 +236,11 @@ enabled = {{.VARA.Enabled}}
 addr = {{printf "%q" .VARA.Addr}}
 # Callsigns to answer on (default: callsign above), e.g. ["LA1ABC-1"].
 mycalls = [{{range $i, $a := .VARA.MyCalls}}{{if $i}}, {{end}}{{printf "%q" $a}}{{end}}]
+# Start the modem together with the BBS (empty = start it yourself). A bare
+# "vardefm" means the copy that comes with HamBBS. List sound cards and PTT
+# devices with: vardefm devices. Example:
+#   autorun = "vardefm modem --audio-in USB --audio-out USB --ptt cm108"
+autorun = {{printf "%q" .VARA.Autorun}}
 
 [ax25]
 # Answer AX.25 packet calls (VHF/UHF 1200/9600 baud) through a TNC with an
@@ -244,6 +251,9 @@ addr = {{printf "%q" .AX25.Addr}}
 port = {{.AX25.Port}}
 # Callsigns to answer on (default: callsign above), e.g. ["LA1ABC-1"].
 mycalls = [{{range $i, $a := .AX25.MyCalls}}{{if $i}}, {{end}}{{printf "%q" $a}}{{end}}]
+# Start the TNC together with the BBS (empty = start it yourself), e.g.
+#   autorun = "direwolf -c /etc/direwolf.conf -t 0"
+autorun = {{printf "%q" .AX25.Autorun}}
 
 [admin]
 # Web admin UI. Keep it on 127.0.0.1 unless you set a password.
@@ -284,12 +294,14 @@ func SaveServer(path string, c Server) error {
 // Client is hambbs-client.toml.
 type Client struct {
 	Callsign      string   `toml:"callsign"`
-	Key           string   `toml:"key"`       // base64 Ed25519 seed derived from the password
-	Transport     string   `toml:"transport"` // "tcp", "vara" or "ax25"
-	Address       string   `toml:"address"`   // tcp: host:port; vara: the BBS callsign; ax25: "CALL [via DIGI,...]"
-	VaraAddr      string   `toml:"vara_addr"` // vara: modem command port host:port
-	AGWAddr       string   `toml:"agw_addr"`  // ax25: TNC AGWPE port host:port
-	AGWPort       int      `toml:"agw_port"`  // ax25: TNC radio port, 0 = first
+	Key           string   `toml:"key"`          // base64 Ed25519 seed derived from the password
+	Transport     string   `toml:"transport"`    // "tcp", "vara" or "ax25"
+	Address       string   `toml:"address"`      // tcp: host:port; vara: the BBS callsign; ax25: "CALL [via DIGI,...]"
+	VaraAddr      string   `toml:"vara_addr"`    // vara: modem command port host:port
+	AGWAddr       string   `toml:"agw_addr"`     // ax25: TNC AGWPE port host:port
+	AGWPort       int      `toml:"agw_port"`     // ax25: TNC radio port, 0 = first
+	VaraAutorun   string   `toml:"vara_autorun"` // vara: command line that starts the modem
+	AGWAutorun    string   `toml:"agw_autorun"`  // ax25: command line that starts the TNC
 	Listen        string   `toml:"listen"`
 	DataDir       string   `toml:"data_dir"`
 	FetchPersonal bool     `toml:"fetch_personal"`
@@ -330,6 +342,18 @@ func LoadClient(path string) (Client, error) {
 func (c Client) DataPath(name string) string { return resolve(c.path, c.DataDir, name) }
 func (c Client) Path() string                { return c.path }
 func (c *Client) SetPath(p string)           { c.path = p }
+
+// Autorun returns the command line that starts the modem or TNC for the
+// chosen transport, and the address it will listen on. Empty if none.
+func (c Client) Autorun() (command, addr string) {
+	switch c.Transport {
+	case "vara":
+		return c.VaraAutorun, c.VaraAddr
+	case "ax25":
+		return c.AGWAutorun, c.AGWAddr
+	}
+	return "", ""
+}
 
 // Configured reports whether the client has enough settings to sync.
 func (c Client) Configured() bool {

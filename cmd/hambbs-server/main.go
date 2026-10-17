@@ -22,6 +22,7 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/notepid/ham-bbs/internal/autorun"
 	"github.com/notepid/ham-bbs/internal/bbs"
 	"github.com/notepid/ham-bbs/internal/buildinfo"
 	"github.com/notepid/ham-bbs/internal/config"
@@ -123,7 +124,36 @@ func run(cfgPath string, initCfg, setPW bool, log *slog.Logger) error {
 		}()
 	}
 
+	// Helper programs (modem, TNC) started with the BBS. They stop after
+	// the listeners have closed, as defers run in reverse order.
+	var helpers []*autorun.Process
+	startHelper := func(name, section, command string) error {
+		if command == "" {
+			return nil
+		}
+		p := autorun.New(name, log)
+		if err := p.Start(command); err != nil {
+			return fmt.Errorf("[%s] autorun: %w", section, err)
+		}
+		helpers = append(helpers, p)
+		return nil
+	}
+	defer func() {
+		for _, p := range helpers {
+			p.Stop()
+		}
+	}()
+	if cfg.VARA.Autorun != "" && !cfg.VARA.Enabled {
+		log.Warn("[vara] autorun is set but vara is not enabled; not starting it")
+	}
+	if cfg.AX25.Autorun != "" && !cfg.AX25.Enabled {
+		log.Warn("[ax25] autorun is set but ax25 is not enabled; not starting it")
+	}
+
 	if cfg.VARA.Enabled {
+		if err := startHelper("vara modem", "vara", cfg.VARA.Autorun); err != nil {
+			return err
+		}
 		l, err := vara.Listen(vara.Config{Addr: cfg.VARA.Addr, MyCalls: cfg.VARA.MyCalls, Log: log})
 		if err != nil {
 			return err
@@ -138,6 +168,9 @@ func run(cfgPath string, initCfg, setPW bool, log *slog.Logger) error {
 	}
 
 	if cfg.AX25.Enabled {
+		if err := startHelper("ax25 TNC", "ax25", cfg.AX25.Autorun); err != nil {
+			return err
+		}
 		l, err := agwpe.Listen(agwpe.Config{Addr: cfg.AX25.Addr, Port: cfg.AX25.Port, MyCalls: cfg.AX25.MyCalls, Log: log})
 		if err != nil {
 			return err
@@ -163,7 +196,7 @@ func run(cfgPath string, initCfg, setPW bool, log *slog.Logger) error {
 		if cfg.Admin.PasswordHash == "" && !isLoopback(cfg.Admin.Listen) {
 			log.Warn("admin UI is reachable from the network without a password; run hambbs-server -set-admin-password")
 		}
-		hs := &http.Server{Addr: cfg.Admin.Listen, Handler: web.NewAdmin(srv, log), ReadHeaderTimeout: 10 * time.Second}
+		hs := &http.Server{Addr: cfg.Admin.Listen, Handler: web.NewAdmin(srv, log, helpers...), ReadHeaderTimeout: 10 * time.Second}
 		go func() {
 			log.Info("admin UI", "url", "http://"+displayAddr(cfg.Admin.Listen)+"/")
 			if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

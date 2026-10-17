@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/notepid/ham-bbs/internal/autorun"
 	"github.com/notepid/ham-bbs/internal/buildinfo"
 	"github.com/notepid/ham-bbs/internal/callsign"
 	"github.com/notepid/ham-bbs/internal/config"
@@ -43,6 +44,8 @@ type Client struct {
 
 	lastMu     sync.Mutex
 	lastReport *Report
+
+	helper *autorun.Process // starts the modem or TNC; set once by SetHelper
 }
 
 // Report summarises one sync session.
@@ -84,7 +87,29 @@ func (c *Client) SetConfig(cfg config.Client) error {
 	if old.Address != cfg.Address || old.Transport != cfg.Transport || old.Callsign != cfg.Callsign || strings.Join(old.Areas, ",") != strings.Join(cfg.Areas, ",") {
 		c.Store.SetInt(keyCursor, 0)
 	}
-	return config.SaveClient(cfg)
+	if err := config.SaveClient(cfg); err != nil {
+		return err
+	}
+	return c.startHelper(cfg)
+}
+
+// SetHelper lets the client run the modem or TNC program configured for
+// its transport (config.Client.Autorun). Call it once, before use.
+func (c *Client) SetHelper(p *autorun.Process) error {
+	c.helper = p
+	return c.startHelper(c.Config())
+}
+
+// Helper returns the process set with SetHelper, or nil.
+func (c *Client) Helper() *autorun.Process { return c.helper }
+
+// startHelper starts, replaces or stops the helper program to match cfg.
+func (c *Client) startHelper(cfg config.Client) error {
+	if c.helper == nil {
+		return nil
+	}
+	cmd, _ := cfg.Autorun()
+	return c.helper.Start(cmd)
 }
 
 // KeyFromPassword derives the stored key for callsign + password.
@@ -135,6 +160,11 @@ func (c *Client) Sync(ctx context.Context) *Report {
 	defer c.syncMu.Unlock()
 	cfg := c.Config()
 	rep := &Report{Started: time.Now(), Server: cfg.Address}
+	if c.helper != nil {
+		if _, addr := cfg.Autorun(); addr != "" {
+			c.helper.WaitPort(ctx, addr) // just started: give it time to open its port
+		}
+	}
 	rep.Err = c.sync(ctx, cfg, rep)
 	rep.Duration = time.Since(rep.Started)
 	c.lastMu.Lock()

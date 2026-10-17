@@ -5,11 +5,14 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"os/exec"
 	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 
+	"github.com/notepid/ham-bbs/internal/autorun"
 	"github.com/notepid/ham-bbs/internal/buildinfo"
 	"github.com/notepid/ham-bbs/internal/callsign"
 	"github.com/notepid/ham-bbs/internal/client"
@@ -44,6 +47,7 @@ func NewClientUI(c *client.Client, log *slog.Logger) http.Handler {
 	mux.HandleFunc("POST /sync", u.startSync)
 	mux.HandleFunc("GET /settings", u.settings)
 	mux.HandleFunc("POST /settings", u.saveSettings)
+	mux.HandleFunc("POST /settings/devices", u.devices)
 	mux.HandleFunc("GET /help", u.help)
 	return sameOrigin(mux)
 }
@@ -193,14 +197,54 @@ func (u *ClientUI) startSync(w http.ResponseWriter, r *http.Request) {
 	redirect(w, r, "/sync", "")
 }
 
+// settingsData is what the settings page shows besides the configuration.
+type settingsData struct {
+	config.Client
+	Helper  *autorun.Status // the modem/TNC program, if one is configured
+	VardeFM bool            // a vardefm program was found
+	Devices string          // output of "vardefm devices"
+}
+
+func (u *ClientUI) settingsData(cfg config.Client) settingsData {
+	d := settingsData{Client: cfg}
+	if h := u.c.Helper(); h != nil {
+		if st := h.Status(); st.Command != "" {
+			d.Helper = &st
+		}
+	}
+	_, err := autorun.Resolve("vardefm")
+	d.VardeFM = err == nil
+	return d
+}
+
 func (u *ClientUI) settings(w http.ResponseWriter, r *http.Request) {
-	u.r.render(w, "settings", u.page(r, "Settings", "settings", u.c.Config()))
+	u.r.render(w, "settings", u.page(r, "Settings", "settings", u.settingsData(u.c.Config())))
+}
+
+// devices runs "vardefm devices" to help the user pick sound card and PTT.
+func (u *ClientUI) devices(w http.ResponseWriter, r *http.Request) {
+	d := u.settingsData(u.c.Config())
+	p := u.page(r, "Settings", "settings", &d)
+	path, err := autorun.Resolve("vardefm")
+	if err != nil {
+		p.Error = err.Error()
+		u.r.render(w, "settings", p)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, path, "devices").CombinedOutput()
+	d.Devices = string(out)
+	if err != nil {
+		p.Error = "vardefm devices: " + err.Error()
+	}
+	u.r.render(w, "settings", p)
 }
 
 func (u *ClientUI) saveSettings(w http.ResponseWriter, r *http.Request) {
 	cfg := u.c.Config()
 	fail := func(msg string) {
-		p := u.page(r, "Settings", "settings", cfg)
+		p := u.page(r, "Settings", "settings", u.settingsData(cfg))
 		p.Error = msg
 		u.r.render(w, "settings", p)
 	}
@@ -256,6 +300,14 @@ func (u *ClientUI) saveSettings(w http.ResponseWriter, r *http.Request) {
 	default:
 		fail("Choose a connection type.")
 		return
+	}
+	cfg.VaraAutorun = strings.TrimSpace(r.FormValue("vara_autorun"))
+	cfg.AGWAutorun = strings.TrimSpace(r.FormValue("agw_autorun"))
+	for _, c := range []string{cfg.VaraAutorun, cfg.AGWAutorun} {
+		if _, err := autorun.Split(c); c != "" && err != nil {
+			fail("Start command: " + err.Error())
+			return
+		}
 	}
 	cfg.FetchPersonal = r.FormValue("fetch_personal") != ""
 	cfg.FetchAreas = splitList(r.FormValue("fetch_areas"))

@@ -31,8 +31,8 @@ A modern, easy-to-run bulletin board and message system for amateur radio.
 ## VardeFM: a faster, open modem for FM
 
 [VardeFM](https://github.com/notepid/vardeFM) is a sister project: an
-open-source, high-speed data modem for FM radios, written for Windows,
-Linux and Raspberry Pi. It turns a sound card interface and an ordinary FM
+open-source, high-speed data modem for FM radios, for Windows, Linux,
+macOS and Raspberry Pi. It turns a sound card interface and an ordinary FM
 radio into a link of up to 7.4 kbit/s through the mic/speaker jacks, or
 18.7 kbit/s through a 9600 data port. Classic packet runs at 1200 bit/s
 on the air, and less in practice.
@@ -42,6 +42,10 @@ its VARA transport; nothing VardeFM-specific is needed. Unlike VARA, its
 waveform and protocol are openly documented. Both stations need VardeFM: it
 can't talk to VARA FM over the air. See
 [docs/setup.md](docs/setup.md#vardefm).
+
+Every HamBBS download includes VardeFM, and HamBBS can
+start it (or Direwolf) for you: see
+[Starting the modem or TNC automatically](docs/setup.md#starting-the-modem-or-tnc-automatically).
 
 ## Download
 
@@ -90,6 +94,10 @@ internal/config        TOML config and setup wizard
 CI (`.github/workflows/ci.yml`) runs the following on every push and pull request:
 - gofmt, vet and tests on Linux and Windows, plus the race detector on Linux
 - a snapshot build of all release targets
+
+Release archives include VardeFM, at the version pinned in
+`scripts/fetch-vardefm.sh`. Run that script before a local
+`goreleaser release --snapshot`.
 
 To release, push a version tag. GoReleaser builds and publishes the GitHub
 release:

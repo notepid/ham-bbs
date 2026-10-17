@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/notepid/ham-bbs/internal/autorun"
 	"github.com/notepid/ham-bbs/internal/bbs"
 	"github.com/notepid/ham-bbs/internal/callsign"
 	"github.com/notepid/ham-bbs/internal/config"
@@ -17,13 +18,15 @@ import (
 
 // Admin is the sysop web UI.
 type Admin struct {
-	srv *bbs.Server
-	r   *renderer
+	srv     *bbs.Server
+	r       *renderer
+	helpers []*autorun.Process
 }
 
-// NewAdmin builds the admin UI handler.
-func NewAdmin(srv *bbs.Server, log *slog.Logger) http.Handler {
-	a := &Admin{srv: srv, r: newRenderer("admin", log)}
+// NewAdmin builds the admin UI handler. helpers are the programs (modem,
+// TNC) the server started; the dashboard shows how they are doing.
+func NewAdmin(srv *bbs.Server, log *slog.Logger, helpers ...*autorun.Process) http.Handler {
+	a := &Admin{srv: srv, r: newRenderer("admin", log), helpers: helpers}
 	mux := http.NewServeMux()
 	mux.Handle("GET /static/", staticHandler())
 	mux.HandleFunc("GET /{$}", a.dashboard)
@@ -77,8 +80,13 @@ func (a *Admin) dashboard(w http.ResponseWriter, r *http.Request) {
 	st, _ := a.srv.Store().Stats()
 	areas, _ := a.srv.Store().Areas()
 	cfg := a.srv.Config()
+	var helpers []autorun.Status
+	for _, p := range a.helpers {
+		helpers = append(helpers, p.Status())
+	}
 	a.r.render(w, "dashboard", a.page(r, "Dashboard", "dash", map[string]any{
 		"Config":   cfg,
+		"Helpers":  helpers,
 		"Stats":    st,
 		"Areas":    areas,
 		"Sessions": a.srv.Sessions(),

@@ -9,3 +9,4 @@ hambbs-client.toml
 *.db
 *.db-wal
 *.db-shm
+/build/

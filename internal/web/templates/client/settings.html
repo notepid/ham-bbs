@@ -43,6 +43,32 @@
     </div>
   </div>
 
+  <h2>Start the modem or TNC with the client</h2>
+  <p class="hint">Optional. The client then starts the program when it starts, restarts it if it stops, and stops it when you close the client. Leave empty to start it yourself.</p>
+  <div class="row">
+    <div>
+      <label for="vara_autorun">VARA modem command</label>
+      <input type="text" id="vara_autorun" name="vara_autorun" value="{{.VaraAutorun}}" placeholder="vardefm modem --audio-in USB --audio-out USB --ptt cm108">
+      <p class="hint">For VardeFM, a plain <code>vardefm</code> uses the copy that comes with HamBBS.{{if .VardeFM}} <button class="small secondary" formaction="/settings/devices" formnovalidate>List sound cards and PTT devices</button>{{end}}</p>
+    </div>
+    <div>
+      <label for="agw_autorun">AX.25 TNC command</label>
+      <input type="text" id="agw_autorun" name="agw_autorun" value="{{.AGWAutorun}}" placeholder="direwolf -c direwolf.conf -t 0">
+      <p class="hint">E.g. Direwolf with your configuration file. Use quotes around paths with spaces.</p>
+    </div>
+  </div>
+  {{with .Devices}}<pre class="body events">{{.}}</pre><p class="hint">Use any unique part of a device name, e.g. <code>--audio-in USB --audio-out USB</code>. Unsaved changes above were not kept.</p>{{end}}
+  {{with .Helper}}
+  <div class="panel">
+    <b>{{.Name}}</b>
+    {{if .Running}}<span class="pill ok">running</span> <span class="muted">for {{ago .Since}}</span>
+    {{else}}<span class="pill bad">not running</span> <span class="muted">{{.LastExit}}{{if .Restarts}}; trying again{{end}}</span>{{end}}
+    <div class="hint"><code>{{.Command}}</code></div>
+    {{if .Output}}<pre class="body events">{{range .Output}}{{.}}
+{{end}}</pre>{{end}}
+  </div>
+  {{end}}
+
   <h2>What to download</h2>
   <label class="check"><input type="checkbox" name="fetch_personal" {{if .FetchPersonal}}checked{{end}}> Always fetch the full text of personal mail</label>
   <label for="areas">Bulletin areas to follow</label>

@@ -7,6 +7,7 @@ before:
   hooks:
     - go mod tidy
     - go test ./...
+    - bash scripts/fetch-vardefm.sh # VardeFM to include in the archives
 
 builds:
   - id: hambbs-server
@@ -46,10 +47,23 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
-    files: &docs
+    files: &files
       - LICENSE
       - README.md
       - docs/*.md
+      # VardeFM, fetched by scripts/fetch-vardefm.sh: the program next to
+      # ours, its docs in vardefm-docs/.
+      - src: build/vardefm/{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}/bin/*
+        dst: .
+        strip_parent: true
+        info:
+          mode: 0755
+      - src: build/vardefm/{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}/doc/*
+        dst: vardefm-docs
+        strip_parent: true
+      - src: build/vardefm/{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}/docs/*
+        dst: vardefm-docs/docs
+        strip_parent: true
   - id: client
     ids: [hambbs-client]
     name_template: >-
@@ -58,7 +72,7 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
-    files: *docs
+    files: *files
 
 checksum:
   name_template: checksums.txt
@@ -74,6 +88,7 @@ release:
   header: |
     **Users:** download `hambbs-client` for your system. It runs on your computer and opens in the browser.
     **Sysops:** download `hambbs-server` to run a BBS.
+    Every download includes the [VardeFM](https://github.com/notepid/vardeFM) modem.
 
     Linux `armv6` runs on every Raspberry Pi; use `arm64` for a 64-bit Raspberry Pi OS.
 

@@ -101,8 +101,8 @@ key, and the server checks that the two callsigns match. See
 ### VardeFM
 
 [VardeFM](https://github.com/notepid/vardeFM) is an open-source data modem
-for FM radios, from the same author as HamBBS. It runs on Windows, Linux
-and Raspberry Pi, and offers VARA FM's TCP interface, so HamBBS uses it
+for FM radios, from the same author as HamBBS. It runs on Windows, Linux,
+macOS and Raspberry Pi, and offers VARA FM's TCP interface, so HamBBS uses it
 exactly like the VARA modem above:
 
 ```
@@ -128,15 +128,27 @@ each other this way. A BBS can offer packet and VardeFM at the same time
 (`[ax25]` and `[vara]` both enabled), but each needs its own radio and
 frequency.
 
+VardeFM is included in every HamBBS download: the `vardefm` program sits
+next to `hambbs-server` or `hambbs-client`, and its user guide is in
+`vardefm-docs/`. The Linux `armv6` download carries the VardeFM build for
+Raspberry Pi 2 and newer, and Windows on ARM gets the x86-64 build. You
+can also get it separately from its
+[releases page](https://github.com/notepid/vardeFM/releases).
+
 To set it up:
 
-1. Download VardeFM from its
-   [releases page](https://github.com/notepid/vardeFM/releases). Follow its
-   user guide to connect the radio and set up PTT, then start it.
+1. Connect the radio and set up PTT as described in VardeFM's user guide
+   (`vardefm-docs/README.md`). `vardefm devices` lists your sound cards and
+   PTT devices.
 2. Server: enable `[vara]` in `hambbs.toml` as shown above, with
-   `addr = "127.0.0.1:8300"`.
+   `addr = "127.0.0.1:8300"`. To have the BBS start VardeFM, add for
+   example
+   `autorun = "vardefm modem --audio-in USB --audio-out USB --ptt cm108"`
+   (see [below](#starting-the-modem-or-tnc-automatically)).
 3. Client: in **Settings**, choose *Radio via VARA modem*. Enter the BBS
-   callsign as the address and `127.0.0.1:8300` as the modem.
+   callsign as the address and `127.0.0.1:8300` as the modem. Fill in
+   *VARA modem command* to have the client start VardeFM; the **List sound
+   cards and PTT devices** button shows the names to use.
 
 Neighbouring BBSes can forward over VardeFM too: `connect = "vara:LA9ABC"`.
 
@@ -181,6 +193,44 @@ Enter the BBS **callsign** as the address and the TNC's AGWPE port
 
 Anyone with a plain packet terminal can also connect and use the BBS's
 text commands. See [ax25.md](ax25.md) for the interface details.
+
+### Starting the modem or TNC automatically
+
+HamBBS can start the modem or TNC program for you, so there is only one
+program to start. This is off unless you set a command.
+
+Server, in `hambbs.toml`:
+
+```toml
+[vara]
+enabled = true
+autorun = "vardefm modem --audio-in USB --audio-out USB --ptt cm108"
+
+[ax25]
+enabled = true
+autorun = "direwolf -c /etc/direwolf.conf -t 0"
+```
+
+Client: in **Settings**, under *Start the modem or TNC with the client*.
+Only the command for the chosen connection type runs.
+
+* The command is a normal command line. Put quotes around arguments with
+  spaces. In `hambbs.toml`, wrap a command with Windows paths in single
+  quotes, so the backslashes stay as they are:
+  `autorun = '"C:\Program Files\direwolf\direwolf.exe" -t 0'`.
+* A plain `vardefm` means the copy next to the HamBBS program. Other
+  names are looked up on the PATH.
+* HamBBS starts the program before it connects, restarts it if it stops
+  (after 2 s, then waiting longer each time up to a minute), and stops it
+  when HamBBS stops. Its output goes to the HamBBS log, and the admin
+  dashboard and the client's Settings page show its status and last lines.
+* HamBBS stops the program the way Ctrl-C would, so it can release PTT.
+  When HamBBS runs without a console window (as a Windows service or
+  scheduled task), it can only end the program forcefully. Check that your
+  PTT interface lets go of the radio when that happens.
+* If HamBBS crashes, the operating system ends the program too (Linux and
+  Windows).
+* `hambbs-client -sync` starts the program, syncs and stops it again.
 
 ## Forwarding between BBS nodes
 
@@ -333,8 +383,9 @@ else. Releases are on the
 2. Stop the server: `sudo systemctl stop hambbs`, stop the scheduled task,
    or press Ctrl+C in its window.
 3. Back up `hambbs.toml` and the `data` folder.
-4. Replace `hambbs-server` (`hambbs-server.exe`) with the new one. Leave
-   `hambbs.toml` and `data` where they are.
+4. Replace `hambbs-server` (`hambbs-server.exe`) with the new one, and
+   `vardefm` and `vardefm-docs` if you use them. Leave `hambbs.toml` and
+   `data` where they are.
 5. Start the server again. It updates the database by itself on start.
    `hambbs-server -version` shows the version you are running.
 
@@ -343,7 +394,7 @@ On Linux with the systemd setup above:
 ```
 sudo systemctl stop hambbs
 sudo cp -a /opt/hambbs/data /opt/hambbs/data.bak
-sudo tar -xzf hambbs-server_*_linux_arm64.tar.gz -C /opt/hambbs hambbs-server
+sudo tar -xzf hambbs-server_*_linux_arm64.tar.gz -C /opt/hambbs hambbs-server vardefm vardefm-docs
 sudo systemctl start hambbs
 ```
 
@@ -352,7 +403,7 @@ sudo systemctl start hambbs
 1. Download the new `hambbs-client` archive for your system.
 2. Close the client: press Ctrl+C in its window, or close the window.
 3. Replace `hambbs-client` (`hambbs-client.exe`) with the new one, in the
-   same folder. `hambbs-client.toml` and the `client-data` folder (your
+   same folder. Replace `vardefm` and `vardefm-docs` too, if you use them. `hambbs-client.toml` and the `client-data` folder (your
    messages and outbox) stay as they are.
 4. Start it again.
 
