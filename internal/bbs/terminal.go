@@ -132,6 +132,11 @@ func (t *terminal) loginTCP(first string) bool {
 			return false
 		}
 		u, err := t.srv.store.GetUser(call)
+		if err != nil && !errors.Is(err, store.ErrNotFound) {
+			t.srv.log.Error("terminal login: look up user", "call", call, "err", err)
+			t.println("Login failed because of a server error. Please try again later.")
+			return false
+		}
 		if err == nil && t.srv.checkPassword(u, pw) {
 			t.call, t.admin = call, u.Admin
 			return true

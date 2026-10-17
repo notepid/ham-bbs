@@ -2,12 +2,13 @@ package client_test
 
 import (
 	"bufio"
+	"bytes"
 	"context"
-	"io"
 	"log/slog"
 	"net"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -32,7 +33,14 @@ func startServer(t *testing.T, mutate func(*config.Server)) (addr string, srv *b
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
-	srv = bbs.New(cfg, st, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	// Keep the server's warnings and errors; show them if the test fails.
+	logs := &lockedBuffer{}
+	t.Cleanup(func() {
+		if t.Failed() {
+			t.Logf("server log:\n%s", logs.String())
+		}
+	})
+	srv = bbs.New(cfg, st, slog.New(slog.NewTextHandler(logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
 	l, err := tcp.Listen("127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -40,6 +48,23 @@ func startServer(t *testing.T, mutate func(*config.Server)) (addr string, srv *b
 	t.Cleanup(func() { l.Close() })
 	go srv.Serve(l)
 	return strings.TrimPrefix(l.String(), "tcp "), srv
+}
+
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }
 
 func newClient(t *testing.T, addr, call, password string) *client.Client {
