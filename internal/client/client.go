@@ -21,6 +21,7 @@ import (
 	"github.com/notepid/ham-bbs/internal/proto"
 	"github.com/notepid/ham-bbs/internal/store"
 	"github.com/notepid/ham-bbs/internal/transport"
+	"github.com/notepid/ham-bbs/internal/transport/agwpe"
 	"github.com/notepid/ham-bbs/internal/transport/tcp"
 	"github.com/notepid/ham-bbs/internal/transport/vara"
 )
@@ -148,8 +149,19 @@ func dialer(cfg config.Client) (transport.Dialer, error) {
 		return tcp.Dialer{}, nil
 	case "vara":
 		return vara.Dialer{Config: vara.Config{Addr: cfg.VaraAddr, MyCalls: []string{cfg.Callsign}}}, nil
+	case "ax25":
+		return agwpe.Dialer{Config: agwpe.Config{Addr: cfg.AGWAddr, Port: cfg.AGWPort, MyCalls: []string{cfg.Callsign}}}, nil
 	}
 	return nil, fmt.Errorf("transport %q is not supported", cfg.Transport)
+}
+
+// syncTimeout bounds a whole sync. 1200 baud packet moves only about 100
+// bytes per second, so it gets more time.
+func syncTimeout(transport string) time.Duration {
+	if transport == "ax25" {
+		return 30 * time.Minute
+	}
+	return 10 * time.Minute
 }
 
 // countingConn tallies bytes so users see what a sync costs in airtime.
@@ -185,7 +197,7 @@ func (c *Client) sync(ctx context.Context, cfg config.Client, rep *Report) error
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, syncTimeout(cfg.Transport))
 	defer cancel()
 	raw, err := d.Dial(ctx, cfg.Address)
 	if err != nil {

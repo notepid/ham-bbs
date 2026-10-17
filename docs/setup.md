@@ -98,9 +98,43 @@ on any packet BBS. Sync clients also sign in with their password-derived
 key, and the server checks that the two callsigns match. See
 [vara.md](vara.md) for the interface details.
 
-### AX.25 (Direwolf)
+### AX.25 packet (Direwolf, UZ7HO soundmodem)
 
-Planned: AX.25 via Direwolf's AGWPE interface (VHF/UHF, 1200/9600 baud).
+For VHF/UHF packet at 1200 or 9600 baud. Any TNC with an AGWPE interface
+works: Direwolf (Linux, Windows, Raspberry Pi) or UZ7HO soundmodem
+(Windows). A minimal `direwolf.conf`:
+
+```
+ADEVICE plughw:1,0     # your sound card (Windows: ADEVICE 1 1, or leave out for the default)
+CHANNEL 0
+MYCALL LA1ABC
+MODEM 1200
+PTT /dev/ttyUSB0 RTS   # or PTT CM108 for USB sound card interfaces, or VOX
+AGWPORT 8000
+```
+
+Server: enable AX.25 in `hambbs.toml` and restart.
+
+```toml
+[ax25]
+enabled = true
+addr = "127.0.0.1:8000"   # Direwolf's AGWPORT
+port = 0                  # radio port: 0 = Direwolf channel 0
+mycalls = ["LA1ABC"]      # callsigns the BBS answers to, e.g. ["LA1ABC-1"]
+```
+
+The BBS registers these callsigns with the TNC, so Direwolf passes their
+calls on to it. Several users can be connected at once. As with VARA, the
+BBS keeps trying until the TNC is up.
+
+Client: run your own TNC (Direwolf or soundmodem with its AGW port on).
+In **Settings**, choose *Packet radio via Direwolf or another AGWPE TNC*.
+Enter the BBS **callsign** as the address and the TNC's AGWPE port
+(normally `127.0.0.1:8000`). Through digipeaters:
+`LA1ABC via LA2DIG,LA3DIG`.
+
+Anyone with a plain packet terminal can also connect and use the BBS's
+text commands. See [ax25.md](ax25.md) for the interface details.
 
 ## Legal checklist
 

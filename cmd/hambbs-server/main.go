@@ -26,6 +26,7 @@ import (
 	"github.com/notepid/ham-bbs/internal/buildinfo"
 	"github.com/notepid/ham-bbs/internal/config"
 	"github.com/notepid/ham-bbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/transport/agwpe"
 	"github.com/notepid/ham-bbs/internal/transport/tcp"
 	"github.com/notepid/ham-bbs/internal/transport/vara"
 	"github.com/notepid/ham-bbs/internal/web"
@@ -131,6 +132,19 @@ func run(cfgPath string, initCfg, setPW bool, log *slog.Logger) error {
 		go func() {
 			if err := srv.Serve(l); err != nil && ctx.Err() == nil {
 				log.Error("vara listener stopped", "err", err)
+			}
+		}()
+	}
+
+	if cfg.AX25.Enabled {
+		l, err := agwpe.Listen(agwpe.Config{Addr: cfg.AX25.Addr, Port: cfg.AX25.Port, MyCalls: cfg.AX25.MyCalls, Log: log})
+		if err != nil {
+			return err
+		}
+		defer l.Close()
+		go func() {
+			if err := srv.Serve(l); err != nil && ctx.Err() == nil {
+				log.Error("ax25 listener stopped", "err", err)
 			}
 		}()
 	}

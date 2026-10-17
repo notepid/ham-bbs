@@ -1,5 +1,5 @@
 // Package transport abstracts the links a BBS session can run over:
-// TCP today, AX.25 via AGWPE (Direwolf, soundmodem) and HF modems later.
+// TCP, VARA-compatible modems, and AX.25 via AGWPE (Direwolf, soundmodem).
 // The BBS core only sees a byte stream plus who is on the other end.
 package transport
 

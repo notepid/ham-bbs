@@ -14,19 +14,32 @@
   </div>
   <label for="transport">Connection</label>
   <select id="transport" name="transport">
-    <option value="tcp" {{if ne .Transport "vara"}}selected{{end}}>Internet / HamNet (TCP/IP)</option>
+    <option value="tcp" {{if or (eq .Transport "tcp") (eq .Transport "")}}selected{{end}}>Internet / HamNet (TCP/IP)</option>
+    <option value="ax25" {{if eq .Transport "ax25"}}selected{{end}}>Packet radio via Direwolf or another AGWPE TNC (AX.25)</option>
     <option value="vara" {{if eq .Transport "vara"}}selected{{end}}>Radio via VARA modem (VARA FM/HF, VardeFM)</option>
   </select>
   <div class="row">
     <div>
       <label for="address">BBS address</label>
       <input type="text" id="address" name="address" value="{{.Address}}" required>
-      <p class="hint">TCP/IP: host:port, e.g. <code>bbs.example.org:6300</code>. Radio: the BBS callsign, e.g. <code>LA1ABC</code>.</p>
+      <p class="hint">TCP/IP: host:port, e.g. <code>bbs.example.org:6300</code>. Radio: the BBS callsign, e.g. <code>LA1ABC</code>. Packet can go through digipeaters: <code>LA1ABC via LA2DIG</code>.</p>
     </div>
     <div>
       <label for="vara_addr">VARA modem</label>
       <input type="text" id="vara_addr" name="vara_addr" value="{{.VaraAddr}}">
-      <p class="hint">Radio only: the modem's command port, normally <code>127.0.0.1:8300</code>.</p>
+      <p class="hint">VARA only: the modem's command port, normally <code>127.0.0.1:8300</code>.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="agw_addr">AX.25 TNC</label>
+      <input type="text" id="agw_addr" name="agw_addr" value="{{.AGWAddr}}">
+      <p class="hint">Packet only: the TNC's AGWPE port. Direwolf: <code>127.0.0.1:8000</code>.</p>
+    </div>
+    <div>
+      <label for="agw_port">TNC radio port</label>
+      <input type="number" id="agw_port" name="agw_port" min="0" max="255" value="{{.AGWPort}}">
+      <p class="hint">0 = the first radio (Direwolf channel 0).</p>
     </div>
   </div>
 

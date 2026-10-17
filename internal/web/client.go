@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"sync/atomic"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/notepid/ham-bbs/internal/client"
 	"github.com/notepid/ham-bbs/internal/config"
 	"github.com/notepid/ham-bbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/transport/agwpe"
 )
 
 // ClientUI is the user's mail UI.
@@ -222,6 +224,26 @@ func (u *ClientUI) saveSettings(w http.ResponseWriter, r *http.Request) {
 		if cfg.VaraAddr == "" {
 			cfg.VaraAddr = config.DefaultClient().VaraAddr
 		}
+	case "ax25":
+		dest, via, err := agwpe.ParseTarget(cfg.Address)
+		if err != nil {
+			fail("For packet radio, enter the BBS callsign as address, e.g. LA1ABC or LA1ABC via LA2DIG (" + err.Error() + ").")
+			return
+		}
+		cfg.Address = dest
+		if len(via) > 0 {
+			cfg.Address += " via " + strings.Join(via, ",")
+		}
+		cfg.AGWAddr = strings.TrimSpace(r.FormValue("agw_addr"))
+		if cfg.AGWAddr == "" {
+			cfg.AGWAddr = config.DefaultClient().AGWAddr
+		}
+		port, err := strconv.Atoi(strings.TrimSpace(r.FormValue("agw_port")))
+		if err != nil || port < 0 || port > 255 {
+			fail("The TNC radio port is a number: 0 for the first port.")
+			return
+		}
+		cfg.AGWPort = port
 	default:
 		fail("Choose a connection type.")
 		return

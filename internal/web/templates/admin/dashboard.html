@@ -9,6 +9,8 @@
 <div class="panel">
   <div class="muted">Station <b>{{.Config.Callsign}}</b>, node <b>{{.Config.Node}}</b>, up {{.Uptime}}.
   TCP {{if .Config.TCP.Enabled}}on <code>{{.Config.TCP.Listen}}</code>{{else}}off{{end}}.
+  VARA {{if .Config.VARA.Enabled}}on <code>{{.Config.VARA.Addr}}</code>{{else}}off{{end}}.
+  AX.25 {{if .Config.AX25.Enabled}}on <code>{{.Config.AX25.Addr}}</code> port {{.Config.AX25.Port}}{{else}}off{{end}}.
   Registration {{if .Config.OpenRegistration}}open{{else}}closed{{end}}.</div>
 </div>
 

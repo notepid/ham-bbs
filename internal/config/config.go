@@ -27,6 +27,7 @@ type Server struct {
 	SyncLimit        int      `toml:"sync_limit"`
 	TCP              TCP      `toml:"tcp"`
 	VARA             VARA     `toml:"vara"`
+	AX25             AX25     `toml:"ax25"`
 	Admin            Admin    `toml:"admin"`
 	Areas            []string `toml:"areas"`
 
@@ -45,6 +46,15 @@ type VARA struct {
 	MyCalls []string `toml:"mycalls"`
 }
 
+// AX25 connects the BBS to an AX.25 TNC with an AGWPE interface (Direwolf,
+// UZ7HO soundmodem).
+type AX25 struct {
+	Enabled bool     `toml:"enabled"`
+	Addr    string   `toml:"addr"`
+	Port    int      `toml:"port"`
+	MyCalls []string `toml:"mycalls"`
+}
+
 type Admin struct {
 	Listen       string `toml:"listen"`
 	PasswordHash string `toml:"password_hash"`
@@ -60,6 +70,7 @@ func DefaultServer() Server {
 		SyncLimit:        200,
 		TCP:              TCP{Enabled: true, Listen: ":6300"},
 		VARA:             VARA{Addr: "127.0.0.1:8300"},
+		AX25:             AX25{Addr: "127.0.0.1:8000"},
 		Admin:            Admin{Listen: "127.0.0.1:8080"},
 		Areas:            []string{"ALL", "LOCAL", "TECH", "SALE"},
 	}
@@ -85,6 +96,9 @@ func LoadServer(path string) (Server, error) {
 	}
 	if len(c.VARA.MyCalls) == 0 {
 		c.VARA.MyCalls = []string{c.Callsign}
+	}
+	if len(c.AX25.MyCalls) == 0 {
+		c.AX25.MyCalls = []string{c.Callsign}
 	}
 	return c, nil
 }
@@ -139,6 +153,16 @@ addr = {{printf "%q" .VARA.Addr}}
 # Callsigns to answer on (default: callsign above), e.g. ["LA1ABC-1"].
 mycalls = [{{range $i, $a := .VARA.MyCalls}}{{if $i}}, {{end}}{{printf "%q" $a}}{{end}}]
 
+[ax25]
+# Answer AX.25 packet calls (VHF/UHF 1200/9600 baud) through a TNC with an
+# AGWPE interface: Direwolf (default port 8000) or UZ7HO soundmodem.
+enabled = {{.AX25.Enabled}}
+addr = {{printf "%q" .AX25.Addr}}
+# TNC radio port: 0 = the first (Direwolf channel 0).
+port = {{.AX25.Port}}
+# Callsigns to answer on (default: callsign above), e.g. ["LA1ABC-1"].
+mycalls = [{{range $i, $a := .AX25.MyCalls}}{{if $i}}, {{end}}{{printf "%q" $a}}{{end}}]
+
 [admin]
 # Web admin UI. Keep it on 127.0.0.1 unless you set a password.
 listen = {{printf "%q" .Admin.Listen}}
@@ -159,9 +183,11 @@ func SaveServer(path string, c Server) error {
 type Client struct {
 	Callsign      string   `toml:"callsign"`
 	Key           string   `toml:"key"`       // base64 Ed25519 seed derived from the password
-	Transport     string   `toml:"transport"` // "tcp" or "vara"
-	Address       string   `toml:"address"`   // tcp: host:port; vara: the BBS callsign
+	Transport     string   `toml:"transport"` // "tcp", "vara" or "ax25"
+	Address       string   `toml:"address"`   // tcp: host:port; vara: the BBS callsign; ax25: "CALL [via DIGI,...]"
 	VaraAddr      string   `toml:"vara_addr"` // vara: modem command port host:port
+	AGWAddr       string   `toml:"agw_addr"`  // ax25: TNC AGWPE port host:port
+	AGWPort       int      `toml:"agw_port"`  // ax25: TNC radio port, 0 = first
 	Listen        string   `toml:"listen"`
 	DataDir       string   `toml:"data_dir"`
 	FetchPersonal bool     `toml:"fetch_personal"`
@@ -177,6 +203,7 @@ func DefaultClient() Client {
 		Transport:     "tcp",
 		Address:       "localhost:6300",
 		VaraAddr:      "127.0.0.1:8300",
+		AGWAddr:       "127.0.0.1:8000",
 		Listen:        "127.0.0.1:8081",
 		DataDir:       "client-data",
 		FetchPersonal: true,

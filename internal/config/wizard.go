@@ -67,6 +67,17 @@ func Wizard(in io.Reader, out io.Writer) (Server, error) {
 			return c, err
 		}
 	}
+	c.AX25.MyCalls = []string{c.Callsign}
+	v, err = ask("Answer AX.25 packet calls via Direwolf or another AGWPE TNC? y/n", "n")
+	if err != nil {
+		return c, err
+	}
+	if strings.HasPrefix(strings.ToLower(v), "y") {
+		c.AX25.Enabled = true
+		if c.AX25.Addr, err = ask("TNC AGWPE address", c.AX25.Addr); err != nil {
+			return c, err
+		}
+	}
 	if c.Admin.Listen, err = ask("Admin web UI address", c.Admin.Listen); err != nil {
 		return c, err
 	}

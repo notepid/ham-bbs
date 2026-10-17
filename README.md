@@ -9,6 +9,8 @@ A modern, easy-to-run bulletin board and message system for amateur radio.
 * **Built for slow links:** clients sync in one batch per session (one link
   turnaround) and you read and write offline. A typical sync is a few
   hundred bytes.
+* **Radio and internet:** AX.25 packet through Direwolf or UZ7HO
+  soundmodem, VARA FM/HF and VardeFM modems, and TCP/IP.
 * **Works with a plain terminal too:** connect with telnet or a packet
   terminal to get a classic BBS command line.
 * **Ham-legal:** no encryption, publicly documented protocol
@@ -21,7 +23,7 @@ A modern, easy-to-run bulletin board and message system for amateur radio.
 |-------|---------|-------|
 | 1 | Core over TCP: store, sync protocol, terminal mode, admin UI, client UI | **done** |
 | 2a | Radio: VARA modems (VARA FM/HF, VardeFM) | **done** (tested with mock modem) |
-| 2b | Radio: AX.25 via Direwolf/AGWPE (VHF/UHF) | next |
+| 2b | Radio: AX.25 via Direwolf/AGWPE (VHF/UHF) | **done** (tested with mock TNC) |
 | 3 | Forwarding between nodes (bulletin flooding, mail routing) | planned |
 | 4 | VARA/ARDOP/FreeDATA, FBB/B2F gateway, message signatures | later |
 
@@ -56,7 +58,8 @@ internal/proto         wire protocol (frames, banner, line reader)
 internal/bbs           server core: sync sessions, terminal mode, rules
 internal/client        client sync engine
 internal/store         SQLite storage (server and client)
-internal/transport     link abstraction; tcp/, vara/ (+ varatest mock modem pair)
+internal/transport     link abstraction; tcp/, vara/ (+ varatest mock modem pair),
+                       agwpe/ (AX.25 via Direwolf; + agwpetest mock TNCs)
 internal/identity      Ed25519 login keys derived from callsign+password
 internal/web           admin and client web UIs (embedded templates)
 internal/config        TOML config and setup wizard
