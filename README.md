@@ -10,7 +10,8 @@ A modern, easy-to-run bulletin board and message system for amateur radio.
   turnaround) and you read and write offline. A typical sync is a few
   hundred bytes.
 * **Radio and internet:** AX.25 packet through Direwolf or UZ7HO
-  soundmodem, VARA FM/HF and VardeFM modems, and TCP/IP.
+  soundmodem, VARA FM/HF and [VardeFM](https://github.com/notepid/vardeFM)
+  modems, and TCP/IP.
 * **Works with a plain terminal too:** connect with telnet or a packet
   terminal to get a classic BBS command line.
 * **Ham-legal:** no encryption, publicly documented protocol
@@ -26,6 +27,21 @@ A modern, easy-to-run bulletin board and message system for amateur radio.
 | 2b | Radio: AX.25 via Direwolf/AGWPE (VHF/UHF) | **done** (tested with mock TNC) |
 | 3 | Forwarding between nodes (bulletin flooding, mail routing) | **done** |
 | 4 | VARA/ARDOP/FreeDATA, FBB/B2F gateway, message signatures | later |
+
+## VardeFM: a faster, open modem for FM
+
+[VardeFM](https://github.com/notepid/vardeFM) is a sister project: an
+open-source, high-speed data modem for FM radios, written for Windows,
+Linux and Raspberry Pi. It turns a sound card interface and an ordinary FM
+radio into a link of up to 7.4 kbit/s through the mic/speaker jacks, or
+18.7 kbit/s through a 9600 data port. Classic packet runs at 1200 bit/s
+on the air, and less in practice.
+
+VardeFM offers the same TCP interface as VARA FM, so HamBBS uses it through
+its VARA transport; nothing VardeFM-specific is needed. Unlike VARA, its
+waveform and protocol are openly documented. Both stations need VardeFM: it
+can't talk to VARA FM over the air. See
+[docs/setup.md](docs/setup.md#vardefm).
 
 ## Download
 

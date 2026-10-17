@@ -98,6 +98,52 @@ on any packet BBS. Sync clients also sign in with their password-derived
 key, and the server checks that the two callsigns match. See
 [vara.md](vara.md) for the interface details.
 
+### VardeFM
+
+[VardeFM](https://github.com/notepid/vardeFM) is an open-source data modem
+for FM radios, from the same author as HamBBS. It runs on Windows, Linux
+and Raspberry Pi, and offers VARA FM's TCP interface, so HamBBS uses it
+exactly like the VARA modem above:
+
+```
+radio ── sound card interface ── vardefm ──(TCP 8300/8301)── hambbs-server
+                                                             or hambbs-client
+```
+
+VardeFM sends the audio and keys the radio (PTT). It also handles
+connecting, error correction and retries, and HamBBS sees a reliable
+connection to the other station. Each station runs its own VardeFM: the BBS
+next to the server, and each user next to the client.
+
+| | 1200 baud packet (Direwolf) | VardeFM narrow | VardeFM wide |
+|---|---|---|---|
+| Radio connection | mic/speaker | mic/speaker | 9600 data port |
+| Speed | about 1.2 kbit/s | 0.7 – 7.4 kbit/s | 1.9 – 18.7 kbit/s |
+| Other side needs | any packet TNC or terminal | VardeFM | VardeFM |
+| Digipeaters | yes | no | no |
+
+VardeFM adjusts its speed to the signal quality. It does not work with VARA
+FM over the air, so the BBS and its users must all use VardeFM to reach
+each other this way. A BBS can offer packet and VardeFM at the same time
+(`[ax25]` and `[vara]` both enabled), but each needs its own radio and
+frequency.
+
+To set it up:
+
+1. Download VardeFM from its
+   [releases page](https://github.com/notepid/vardeFM/releases). Follow its
+   user guide to connect the radio and set up PTT, then start it.
+2. Server: enable `[vara]` in `hambbs.toml` as shown above, with
+   `addr = "127.0.0.1:8300"`.
+3. Client: in **Settings**, choose *Radio via VARA modem*. Enter the BBS
+   callsign as the address and `127.0.0.1:8300` as the modem.
+
+Neighbouring BBSes can forward over VardeFM too: `connect = "vara:LA9ABC"`.
+
+Without radios, VardeFM's `sim-pair` runs two modems joined by a simulated
+FM link, which is handy for trying out a BBS and a client on one computer.
+See [vara.md](vara.md#testing-without-a-radio).
+
 ### AX.25 packet (Direwolf, UZ7HO soundmodem)
 
 For VHF/UHF packet at 1200 or 9600 baud. Any TNC with an AGWPE interface

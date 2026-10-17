@@ -52,8 +52,8 @@ Package `internal/transport/vara/varatest` is a pair of mock modems
 connected to each other, with configurable bitrate and latency.
 `internal/client/vara_test.go` runs full BBS sessions through it.
 
-For realistic radio conditions (noise, retries, turnarounds), use VardeFM's
-virtual radio pair. It runs two modems joined by a simulated FM link:
+For realistic radio conditions (noise, retries, turnarounds), use
+[VardeFM](https://github.com/notepid/vardeFM)'s virtual radio pair. It runs two modems joined by a simulated FM link:
 
 ```
 vardefm sim-pair --mode narrow --cnr 15 --ppm 50 --record wavs
