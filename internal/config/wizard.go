@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"hambbs/internal/callsign"
+	"github.com/notepid/ham-bbs/internal/callsign"
 )
 
 // Wizard asks the few questions needed for a working server config.

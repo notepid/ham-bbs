@@ -1,0 +1,62 @@
+# Release builds: https://goreleaser.com
+# Triggered by pushing a tag like v0.1.0 (see .github/workflows/release.yml).
+version: 2
+project_name: hambbs
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: hambbs-server
+    main: ./cmd/hambbs-server
+    binary: hambbs-server
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/notepid/ham-bbs/internal/buildinfo.Version=v{{ .Version }}
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64, arm]
+    goarm: ["6"] # armv6 runs on every 32-bit Raspberry Pi, Zero included
+    ignore:
+      - { goos: windows, goarch: arm }
+      - { goos: darwin, goarch: arm }
+  - id: hambbs-client
+    main: ./cmd/hambbs-client
+    binary: hambbs-client
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/notepid/ham-bbs/internal/buildinfo.Version=v{{ .Version }}
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64, arm]
+    goarm: ["6"]
+    ignore:
+      - { goos: windows, goarch: arm }
+      - { goos: darwin, goarch: arm }
+
+archives:
+  - id: hambbs
+    ids: [hambbs-server, hambbs-client]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - docs/*.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude: ["^docs:", "^test:", "^ci:"]
+
+release:
+  draft: false
+  prerelease: auto # tags like v0.2.0-rc1 become pre-releases

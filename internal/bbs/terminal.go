@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"hambbs/internal/callsign"
-	"hambbs/internal/proto"
-	"hambbs/internal/store"
-	"hambbs/internal/transport"
+	"github.com/notepid/ham-bbs/internal/callsign"
+	"github.com/notepid/ham-bbs/internal/proto"
+	"github.com/notepid/ham-bbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/transport"
 )
 
 // terminal serves a human using a plain packet terminal or telnet. Over a

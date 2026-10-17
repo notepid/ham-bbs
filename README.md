@@ -25,6 +25,18 @@ A modern, easy-to-run bulletin board and message system for amateur radio.
 | 3 | Forwarding between nodes (bulletin flooding, mail routing) | planned |
 | 4 | VARA/ARDOP/FreeDATA, FBB/B2F gateway, message signatures | later |
 
+## Download
+
+Prebuilt binaries for Linux (x86-64, ARM64, ARMv6 for every Raspberry Pi),
+Windows and macOS are on the [Releases](https://github.com/notepid/ham-bbs/releases) page.
+Each archive contains both `hambbs-server` and `hambbs-client`.
+
+With Go installed you can also run:
+
+```
+go install github.com/notepid/ham-bbs/cmd/...@latest
+```
+
 ## Quick start
 
 ```
@@ -51,6 +63,21 @@ internal/config        TOML config and setup wizard
 ```
 
 ## Development
+
+CI (`.github/workflows/ci.yml`) runs the following on every push and pull request:
+- gofmt, vet and tests on Linux and Windows, plus the race detector on Linux
+- a snapshot build of all release targets
+
+To release, push a version tag. GoReleaser builds and publishes the GitHub
+release:
+
+```
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Tags like `v0.2.0-rc1` become pre-releases. `hambbs-server -version` shows
+the version a binary was built from.
 
 ```
 go test ./...

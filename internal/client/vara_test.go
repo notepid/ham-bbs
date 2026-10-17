@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"hambbs/internal/bbs"
-	"hambbs/internal/client"
-	"hambbs/internal/config"
-	"hambbs/internal/store"
-	"hambbs/internal/transport/vara"
-	"hambbs/internal/transport/vara/varatest"
+	"github.com/notepid/ham-bbs/internal/bbs"
+	"github.com/notepid/ham-bbs/internal/client"
+	"github.com/notepid/ham-bbs/internal/config"
+	"github.com/notepid/ham-bbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/transport/vara"
+	"github.com/notepid/ham-bbs/internal/transport/vara/varatest"
 )
 
 // TestSyncOverVARA runs complete sessions through a mock VARA modem pair

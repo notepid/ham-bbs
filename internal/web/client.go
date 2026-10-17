@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"hambbs/internal/callsign"
-	"hambbs/internal/client"
-	"hambbs/internal/config"
-	"hambbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/callsign"
+	"github.com/notepid/ham-bbs/internal/client"
+	"github.com/notepid/ham-bbs/internal/config"
+	"github.com/notepid/ham-bbs/internal/store"
 )
 
 // ClientUI is the user's mail UI.

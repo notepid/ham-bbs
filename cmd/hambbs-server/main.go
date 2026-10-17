@@ -22,19 +22,25 @@ import (
 
 	"golang.org/x/term"
 
-	"hambbs/internal/bbs"
-	"hambbs/internal/config"
-	"hambbs/internal/store"
-	"hambbs/internal/transport/tcp"
-	"hambbs/internal/transport/vara"
-	"hambbs/internal/web"
+	"github.com/notepid/ham-bbs/internal/bbs"
+	"github.com/notepid/ham-bbs/internal/buildinfo"
+	"github.com/notepid/ham-bbs/internal/config"
+	"github.com/notepid/ham-bbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/transport/tcp"
+	"github.com/notepid/ham-bbs/internal/transport/vara"
+	"github.com/notepid/ham-bbs/internal/web"
 )
 
 func main() {
 	cfgPath := flag.String("config", "hambbs.toml", "configuration file")
 	initCfg := flag.Bool("init", false, "run the setup wizard and write the configuration file")
 	setPW := flag.Bool("set-admin-password", false, "set the admin web UI password")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("hambbs-server", buildinfo.String())
+		return
+	}
 
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	if err := run(*cfgPath, *initCfg, *setPW, log); err != nil {
@@ -102,7 +108,7 @@ func run(cfgPath string, initCfg, setPW bool, log *slog.Logger) error {
 	srv := bbs.New(cfg, st, log)
 	go srv.Run(ctx)
 
-	log.Info("HamBBS starting", "callsign", cfg.Callsign, "node", cfg.Node, "db", dbPath)
+	log.Info("HamBBS starting", "version", buildinfo.String(), "callsign", cfg.Callsign, "node", cfg.Node, "db", dbPath)
 	if cfg.TCP.Enabled {
 		l, err := tcp.Listen(cfg.TCP.Listen)
 		if err != nil {

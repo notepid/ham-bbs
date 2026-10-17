@@ -14,21 +14,23 @@ import (
 	"sync"
 	"time"
 
-	"hambbs/internal/callsign"
-	"hambbs/internal/config"
-	"hambbs/internal/identity"
-	"hambbs/internal/proto"
-	"hambbs/internal/store"
-	"hambbs/internal/transport"
-	"hambbs/internal/transport/tcp"
-	"hambbs/internal/transport/vara"
+	"github.com/notepid/ham-bbs/internal/buildinfo"
+	"github.com/notepid/ham-bbs/internal/callsign"
+	"github.com/notepid/ham-bbs/internal/config"
+	"github.com/notepid/ham-bbs/internal/identity"
+	"github.com/notepid/ham-bbs/internal/proto"
+	"github.com/notepid/ham-bbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/transport"
+	"github.com/notepid/ham-bbs/internal/transport/tcp"
+	"github.com/notepid/ham-bbs/internal/transport/vara"
 )
 
 const (
 	keyCursor = "cursor"
-	// ClientName is sent in HELLO.
-	ClientName = "hambbs-client/0.1"
 )
+
+// clientName is sent in HELLO.
+func clientName() string { return "hambbs-client/" + buildinfo.String() }
 
 // Client is the local mailbox plus sync engine.
 type Client struct {
@@ -217,7 +219,7 @@ func (c *Client) sync(ctx context.Context, cfg config.Client, rep *Report) error
 		Version: proto.Version,
 		Sig:     identity.Sign(key, banner.Node, call, banner.Nonce),
 		PubKey:  key.Public().(ed25519.PublicKey),
-		Client:  ClientName,
+		Client:  clientName(),
 	}
 	proto.WriteFrame(w, proto.THello, hello)
 

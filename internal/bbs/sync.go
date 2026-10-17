@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"hambbs/internal/callsign"
-	"hambbs/internal/proto"
-	"hambbs/internal/transport"
+	"github.com/notepid/ham-bbs/internal/callsign"
+	"github.com/notepid/ham-bbs/internal/proto"
+	"github.com/notepid/ham-bbs/internal/transport"
 )
 
 const maxGet = 200

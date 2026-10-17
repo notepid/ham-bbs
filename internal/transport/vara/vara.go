@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"hambbs/internal/callsign"
-	"hambbs/internal/transport"
+	"github.com/notepid/ham-bbs/internal/callsign"
+	"github.com/notepid/ham-bbs/internal/transport"
 )
 
 const (

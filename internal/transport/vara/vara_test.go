@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"hambbs/internal/transport"
-	"hambbs/internal/transport/vara"
-	"hambbs/internal/transport/vara/varatest"
+	"github.com/notepid/ham-bbs/internal/transport"
+	"github.com/notepid/ham-bbs/internal/transport/vara"
+	"github.com/notepid/ham-bbs/internal/transport/vara/varatest"
 )
 
 var quiet = slog.New(slog.NewTextHandler(io.Discard, nil))

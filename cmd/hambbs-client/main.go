@@ -21,17 +21,23 @@ import (
 	"syscall"
 	"time"
 
-	"hambbs/internal/client"
-	"hambbs/internal/config"
-	"hambbs/internal/store"
-	"hambbs/internal/web"
+	"github.com/notepid/ham-bbs/internal/buildinfo"
+	"github.com/notepid/ham-bbs/internal/client"
+	"github.com/notepid/ham-bbs/internal/config"
+	"github.com/notepid/ham-bbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/web"
 )
 
 func main() {
 	cfgPath := flag.String("config", "hambbs-client.toml", "configuration file")
 	noBrowser := flag.Bool("no-browser", false, "do not open the browser")
 	syncOnce := flag.Bool("sync", false, "sync once and exit")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("hambbs-client", buildinfo.String())
+		return
+	}
 
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	if err := run(*cfgPath, *noBrowser, *syncOnce, log); err != nil {
@@ -89,7 +95,7 @@ func run(cfgPath string, noBrowser, syncOnce bool, log *slog.Logger) error {
 			stop()
 		}
 	}()
-	log.Info("HamBBS client running", "url", url, "config", cfgPath)
+	log.Info("HamBBS client running", "version", buildinfo.String(), "url", url, "config", cfgPath)
 	fmt.Printf("\nHamBBS client is running. Open %s in your browser.\nPress Ctrl+C to stop.\n\n", url)
 	if !noBrowser {
 		if err := web.OpenBrowser(url); err != nil {

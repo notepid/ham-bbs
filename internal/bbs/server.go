@@ -14,11 +14,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"hambbs/internal/config"
-	"hambbs/internal/identity"
-	"hambbs/internal/proto"
-	"hambbs/internal/store"
-	"hambbs/internal/transport"
+	"github.com/notepid/ham-bbs/internal/config"
+	"github.com/notepid/ham-bbs/internal/identity"
+	"github.com/notepid/ham-bbs/internal/proto"
+	"github.com/notepid/ham-bbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/transport"
 )
 
 const (

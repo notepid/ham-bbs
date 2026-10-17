@@ -1,4 +1,4 @@
-module hambbs
+module github.com/notepid/ham-bbs
 
 go 1.26.4
 

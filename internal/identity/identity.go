@@ -14,7 +14,7 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
-	"hambbs/internal/callsign"
+	"github.com/notepid/ham-bbs/internal/callsign"
 )
 
 // Argon2id parameters. Changing these changes every derived key.

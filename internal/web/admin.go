@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"hambbs/internal/bbs"
-	"hambbs/internal/callsign"
-	"hambbs/internal/config"
-	"hambbs/internal/identity"
-	"hambbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/bbs"
+	"github.com/notepid/ham-bbs/internal/callsign"
+	"github.com/notepid/ham-bbs/internal/config"
+	"github.com/notepid/ham-bbs/internal/identity"
+	"github.com/notepid/ham-bbs/internal/store"
 )
 
 // Admin is the sysop web UI.

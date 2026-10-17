@@ -14,7 +14,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"hambbs/internal/proto"
+	"github.com/notepid/ham-bbs/internal/proto"
 )
 
 // ErrNotFound is returned when a row does not exist.

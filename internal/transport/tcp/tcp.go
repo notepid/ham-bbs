@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"hambbs/internal/transport"
+	"github.com/notepid/ham-bbs/internal/transport"
 )
 
 type conn struct {

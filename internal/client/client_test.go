@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"hambbs/internal/bbs"
-	"hambbs/internal/client"
-	"hambbs/internal/config"
-	"hambbs/internal/store"
-	"hambbs/internal/transport/tcp"
+	"github.com/notepid/ham-bbs/internal/bbs"
+	"github.com/notepid/ham-bbs/internal/client"
+	"github.com/notepid/ham-bbs/internal/config"
+	"github.com/notepid/ham-bbs/internal/store"
+	"github.com/notepid/ham-bbs/internal/transport/tcp"
 )
 
 // startServer runs a BBS on a random local port.

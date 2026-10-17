@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"hambbs/internal/proto"
+	"github.com/notepid/ham-bbs/internal/proto"
 )
 
 // Client-side mailbox operations.

@@ -9,8 +9,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"hambbs/internal/callsign"
-	"hambbs/internal/proto"
+	"github.com/notepid/ham-bbs/internal/callsign"
+	"github.com/notepid/ham-bbs/internal/proto"
 )
 
 const maxSubject = 80
