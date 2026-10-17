@@ -171,6 +171,105 @@ scopes = ["*"]                 # bulletin scopes they get
 * Messages are de-duplicated by ID and never go back to a node they came
   through, so loops in the network are harmless.
 
+### Routes and scopes by example
+
+A small network: two Norwegian BBSes hang off a hub, and the hub has a
+link to Sweden that leads to the rest of the world.
+
+```
+  LA1OSL ──┐
+           ├── LA2HUB ── SM5BBS ── (rest of the world)
+  LA9BRG ──┘
+     │
+  LA9XYZ, LA9QRS   (small BBSes that only talk to LA9BRG)
+```
+
+**A BBS with a single neighbour** (LA1OSL here) sends everything it can't
+deliver itself to that neighbour:
+
+```toml
+# hambbs.toml on LA1OSL
+[[neighbor]]
+node = "LA2HUB"
+password = "osl-hub secret"
+connect = "tcp:hub.example.org:6300"
+interval = 30
+routes = ["*"]       # default route: all mail for other nodes goes here
+scopes = ["*"]       # and all scoped bulletins
+```
+
+**The hub** needs a line per neighbour:
+
+```toml
+# hambbs.toml on LA2HUB
+[[neighbor]]
+node = "LA1OSL"
+password = "osl-hub secret"   # the same as on LA1OSL
+# no connect: LA1OSL calls us
+# no routes: mail for LA1OSL itself goes there anyway
+scopes = ["*"]
+
+[[neighbor]]
+node = "LA9BRG"
+call = "LA9ABC"
+password = "brg-hub secret"
+connect = "ax25:LA9ABC-1"
+interval = 60
+routes = ["LA9*"]             # the small LA9 BBSes behind LA9BRG
+scopes = ["ALL", "LA"]        # network-wide and Norwegian bulletins only
+
+[[neighbor]]
+node = "SM5BBS"
+password = "hub-sm5 secret"
+connect = "tcp:sm5bbs.example.se:6300"
+interval = 60
+routes = ["*"]                # everything else
+scopes = ["ALL", "EU"]
+```
+
+Where the hub sends things:
+
+| Address | Goes to | Why |
+|---------|---------|-----|
+| `LA1ABC@LA1OSL` | LA1OSL | a neighbour's own node name |
+| `LA1ABC@LA1OSL.OSL.NOR.EU` | LA1OSL | the first part of the address counts |
+| `LA9ZZ@LA9XYZ` | LA9BRG | matches its route `LA9*` |
+| `SM0AAA@SK0BBS` | SM5BBS | no other match: default route `*` |
+| `LA2ZZ@LA2HUB`, `LA2ZZ` | stays | for the hub's own users |
+| bulletin `TECH` | stays | no scope: only on the BBS where it was posted |
+| bulletin `TECH@ALL` | all three | every neighbour's scopes match `ALL` |
+| bulletin `TECH@LA` | LA1OSL, LA9BRG | SM5BBS only takes `ALL` and `EU` |
+| bulletin `TECH@EU` | LA1OSL, SM5BBS | LA9BRG only takes `ALL` and `LA` |
+
+Nothing is sent back to the node a message came from, or to any other node
+it has already passed through.
+
+How a BBS picks the neighbour for personal mail to `CALL@NODE`:
+
+1. A neighbour whose `node` is `NODE` (only the part before the first dot
+   counts, so `LA1OSL.OSL.NOR.EU` means `LA1OSL`).
+2. Otherwise the first neighbour, in file order, with a `routes` pattern
+   that matches. `*` matches any characters and `?` one character. The
+   pattern is checked against the whole address after `@`, so `*.SE` or
+   `*.EU` work for hierarchical addresses.
+3. Otherwise the neighbour with the default route `"*"`.
+
+Bulletin `scopes` use the same patterns on the part after `@`. `"*"` takes
+every scope. A neighbour without `scopes` in the file gets every scope.
+
+Tips:
+
+* Give each BBS **at most one default route**, pointing towards the
+  bigger network. If two BBSes have default routes pointing at each
+  other, mail for an unknown node is not sent back and forth: it stops at
+  the second one and shows up as *held* on its **Neighbours** page.
+* A user can only post mail to a node that their BBS has some route to.
+  On a BBS with a default route, everything is accepted, and mail for a
+  node nobody knows ends up *held* at the last BBS on the way.
+* Agree on the bulletin scopes in your network (for example `ALL`, a
+  country prefix like `LA`, a region like `EU`), and use them in
+  `scopes`.
+
 The admin **Neighbours** page shows queues, last results and errors, and
 has a **Forward now** button. Restart the BBS after changing neighbours.
 The protocol is described in [protocol.md](protocol.md) §7.
