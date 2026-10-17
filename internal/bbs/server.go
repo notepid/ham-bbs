@@ -43,6 +43,10 @@ type Server struct {
 	// Argon2 key derivation uses 64 MiB; bound concurrent terminal
 	// password checks so a flood of logins can't exhaust memory.
 	kdfSem chan struct{}
+
+	neighbors []*neighbor
+	dialers   map[string]transport.Dialer // guarded by mu
+	ctx       context.Context             // set by Run; guarded by mu
 }
 
 // Session describes a connected peer (for the admin UI).
@@ -51,7 +55,7 @@ type Session struct {
 	Call      string
 	Transport string
 	Remote    string
-	Mode      string // "sync" or "terminal"
+	Mode      string // "sync", "terminal" or "forward"
 	Started   time.Time
 }
 
@@ -66,14 +70,27 @@ func New(cfg config.Server, st *store.Store, log *slog.Logger) *Server {
 	if log == nil {
 		log = slog.Default()
 	}
+	st.SetLocalNode(cfg.Node)
 	return &Server{
-		cfg:      cfg,
-		store:    st,
-		log:      log,
-		started:  time.Now(),
-		sessions: map[int64]*Session{},
-		kdfSem:   make(chan struct{}, 2),
+		cfg:       cfg,
+		store:     st,
+		log:       log,
+		started:   time.Now(),
+		sessions:  map[int64]*Session{},
+		kdfSem:    make(chan struct{}, 2),
+		neighbors: newNeighbors(cfg),
+		dialers:   map[string]transport.Dialer{},
 	}
+}
+
+// runCtx is the context Run was started with (Background before that).
+func (s *Server) runCtx() context.Context {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.ctx == nil {
+		return context.Background()
+	}
+	return s.ctx
 }
 
 // Config returns the server configuration.
@@ -118,8 +135,12 @@ func (s *Server) event(format string, args ...any) {
 	s.mu.Unlock()
 }
 
-// Run performs housekeeping until ctx is done.
+// Run performs housekeeping and scheduled forwarding until ctx is done.
 func (s *Server) Run(ctx context.Context) {
+	s.mu.Lock()
+	s.ctx = ctx
+	s.mu.Unlock()
+	s.runForwarding(ctx)
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
 	for {
@@ -195,11 +216,11 @@ func (s *Server) Handle(c transport.Conn) {
 		return
 	}
 	if strings.TrimSpace(first) == proto.Magic {
-		sess.Mode = "sync"
+		s.setSessionMode(sess, "sync")
 		s.serveSync(c, sess, r, w, nonce)
 		return
 	}
-	sess.Mode = "terminal"
+	s.setSessionMode(sess, "terminal")
 	t := &terminal{srv: s, c: c, sess: sess, lr: lr, w: w, nl: nl}
 	t.run(first)
 }
@@ -213,6 +234,12 @@ func (s *Server) bannerText() string {
 }
 
 func (s *Server) prompt() string { return s.cfg.Node + "> " }
+
+func (s *Server) setSessionMode(sess *Session, mode string) {
+	s.mu.Lock()
+	sess.Mode = mode
+	s.mu.Unlock()
+}
 
 func (s *Server) setSessionCall(sess *Session, call string) {
 	s.mu.Lock()

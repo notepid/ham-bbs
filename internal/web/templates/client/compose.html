@@ -13,7 +13,7 @@
       <label for="to">To</label>
       <input type="text" id="to" name="to" value="{{.To}}" list="areas" required autocomplete="off">
       <datalist id="areas">{{range .Areas}}<option value="{{.Name}}">{{end}}</datalist>
-      <p class="hint">Personal: a callsign, e.g. LA1ABC. Bulletin: an area, e.g. TECH.</p>
+      <p class="hint">Personal: a callsign, e.g. <code>LA1ABC</code>, or <code>LA1ABC@LA9BBS</code> for a user of another BBS. Bulletin: an area, e.g. <code>TECH</code> (this BBS only) or <code>TECH@ALL</code> (whole network).</p>
     </div>
   </div>
   <label for="subject">Subject</label>

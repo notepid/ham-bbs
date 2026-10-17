@@ -217,6 +217,12 @@ func (t *tnc) handle(f Frame) {
 	t.notify()
 }
 
+func (t *tnc) isClosed() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.closed
+}
+
 func (t *tnc) close() {
 	t.mu.Lock()
 	if t.closed {
@@ -571,27 +577,44 @@ func (d Dialer) Dial(ctx context.Context, target string) (transport.Conn, error)
 	if err != nil {
 		return nil, err
 	}
-	c := &Conn{t: t, own: own, remote: dest, via: via, closeTNC: true}
+	c, err := t.connect(ctx, own, dest, via)
+	if err != nil {
+		t.close()
+		return nil, err
+	}
+	c.closeTNC = true
+	return c, nil
+}
+
+// connect sets up an AX.25 session from own to dest.
+func (t *tnc) connect(ctx context.Context, own, dest string, via []string) (*Conn, error) {
+	k := key{own, dest}
+	c := &Conn{t: t, own: own, remote: dest, via: via}
 	t.mu.Lock()
-	t.sessions[key{own, dest}] = c
+	if t.sessions[k] != nil {
+		t.mu.Unlock()
+		return nil, fmt.Errorf("agwpe: already connected to %s", dest)
+	}
+	t.sessions[k] = c
 	t.mu.Unlock()
 	f := Frame{Kind: 'C', From: own, To: dest}
 	if len(via) > 0 {
 		f.Kind, f.Data = 'v', viaData(via)
 	}
-	if err := t.send(f); err != nil {
-		t.close()
-		return nil, err
+	err := t.send(f)
+	if err == nil {
+		err = t.wait(ctx, func() bool { return c.connected || c.ended })
 	}
-	err = t.wait(ctx, func() bool { return c.connected || c.ended })
 	t.mu.Lock()
 	connected, reason := c.connected, c.reason
+	if !connected && t.sessions[k] == c {
+		delete(t.sessions, k)
+	}
 	t.mu.Unlock()
 	switch {
 	case err == nil && connected:
 		return c, nil
 	case err == nil:
-		t.close()
 		if reason != "" {
 			return nil, fmt.Errorf("agwpe: %s did not answer (%s)", dest, reason)
 		}
@@ -600,7 +623,6 @@ func (d Dialer) Dial(ctx context.Context, target string) (transport.Conn, error)
 		if ctx.Err() != nil {
 			t.send(Frame{Kind: 'd', From: own, To: dest})
 		}
-		t.close()
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, fmt.Errorf("agwpe: no answer from %s", dest)
 		}
@@ -719,6 +741,25 @@ func (l *Listener) setup() (*tnc, error) {
 	}
 	l.log.Info("AX.25 TNC ready", "addr", l.cfg.Addr, "port", l.cfg.Port, "mycall", strings.Join(l.calls, " "), "ports", ports)
 	return t, nil
+}
+
+// Dial connects to target (as for ParseTarget) through the listener's TNC
+// connection, as the listener's first callsign. The BBS uses it to call
+// neighbour nodes.
+func (l *Listener) Dial(ctx context.Context, target string) (transport.Conn, error) {
+	dest, via, err := ParseTarget(target)
+	if err != nil {
+		return nil, fmt.Errorf("agwpe: %w", err)
+	}
+	l.mu.Lock()
+	t := l.t
+	l.mu.Unlock()
+	if t == nil || t.isClosed() {
+		return nil, errors.New("agwpe: TNC not connected")
+	}
+	ctx, cancel := context.WithTimeout(ctx, defaultDialTime)
+	defer cancel()
+	return t.connect(ctx, l.calls[0], dest, via)
 }
 
 // Accept waits for the next incoming session.

@@ -79,6 +79,7 @@ type modem struct {
 	mu        sync.Mutex
 	changed   chan struct{} // closed and replaced on every state change
 	connected bool
+	dialing   bool      // Listener.Dial is setting up a link
 	peers     [2]string // source, destination of current link
 	buffer    int       // BUFFER n: bytes not yet acknowledged
 	bufEvents int       // BUFFER reports seen
@@ -558,6 +559,71 @@ func (l *Listener) modem() (*modem, error) {
 	}
 }
 
+// Dial calls the station with callsign target through the listener's
+// modem, as the listener's first callsign. The modem must be idle. The BBS
+// uses it to call neighbour nodes.
+func (l *Listener) Dial(ctx context.Context, target string) (transport.Conn, error) {
+	target = callsign.Normalize(target)
+	if !callsign.Valid(target) {
+		return nil, fmt.Errorf("vara: %q is not a callsign", target)
+	}
+	mycall := callsign.Normalize(l.cfg.MyCalls[0])
+	l.mu.Lock()
+	m := l.m
+	l.mu.Unlock()
+	if m == nil {
+		return nil, errors.New("vara: modem not connected")
+	}
+	m.mu.Lock()
+	if m.closed || m.connected || m.conn != nil || m.dialing {
+		closed := m.closed
+		m.mu.Unlock()
+		if closed {
+			return nil, errors.New("vara: modem not connected")
+		}
+		return nil, errors.New("vara: modem busy")
+	}
+	m.dialing = true
+	discs := m.discs
+	m.mu.Unlock()
+	done := func() {
+		m.mu.Lock()
+		m.dialing = false
+		m.notify()
+		m.mu.Unlock()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, defaultDialTime)
+	defer cancel()
+	if err := m.command("CONNECT " + mycall + " " + target); err != nil {
+		done()
+		return nil, err
+	}
+	err := m.wait(ctx, func() bool { return m.connected || m.discs > discs })
+	if err != nil {
+		if ctx.Err() != nil {
+			m.command("ABORT")
+		}
+		done()
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("vara: no answer from %s", target)
+		}
+		return nil, err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.dialing = false
+	m.notify()
+	if !m.connected {
+		return nil, fmt.Errorf("vara: %s did not answer", target)
+	}
+	if m.peers[0] != mycall {
+		// Someone called us at the same moment; Accept takes that link.
+		return nil, errors.New("vara: modem busy with an incoming call")
+	}
+	return m.newConn(target), nil
+}
+
 // Accept waits for the next incoming session.
 func (l *Listener) Accept() (transport.Conn, error) {
 	for {
@@ -566,7 +632,7 @@ func (l *Listener) Accept() (transport.Conn, error) {
 			return nil, err
 		}
 		// Wait until a link is up and no session is using it.
-		err = m.wait(l.ctx, func() bool { return m.connected && m.conn == nil })
+		err = m.wait(l.ctx, func() bool { return m.connected && m.conn == nil && !m.dialing })
 		if errors.Is(err, ErrClosed) {
 			l.log.Warn("vara modem connection lost")
 			continue
@@ -575,7 +641,7 @@ func (l *Listener) Accept() (transport.Conn, error) {
 			return nil, net.ErrClosed
 		}
 		m.mu.Lock()
-		if !m.connected || m.conn != nil {
+		if !m.connected || m.conn != nil || m.dialing {
 			m.mu.Unlock()
 			continue
 		}

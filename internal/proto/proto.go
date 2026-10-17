@@ -53,6 +53,8 @@ const (
 	TEnd       Type = 9  // either: end of batch, other side's turn
 	TBye       Type = 10 // either: end of batch and session
 	TError     Type = 11 // S->C: fatal error, session ends
+	TOffer     Type = 12 // node<->node: messages the sender has for the other side
+	TWant      Type = 13 // node<->node: offered messages the receiver lacks
 )
 
 func (t Type) String() string {
@@ -79,6 +81,10 @@ func (t Type) String() string {
 		return "BYE"
 	case TError:
 		return "ERROR"
+	case TOffer:
+		return "OFFER"
+	case TWant:
+		return "WANT"
 	}
 	return fmt.Sprintf("TYPE(%d)", uint8(t))
 }
@@ -92,6 +98,10 @@ type Hello struct {
 	Sig     []byte `cbor:"3,keyasint"`
 	PubKey  []byte `cbor:"4,keyasint,omitempty"`
 	Client  string `cbor:"5,keyasint,omitempty"`
+	// Node is set when a neighbour BBS logs in to forward messages. The
+	// signature then proves knowledge of the link password configured on
+	// both nodes, and the session continues with OFFER/WANT.
+	Node string `cbor:"6,keyasint,omitempty"`
 }
 
 // Welcome confirms login.
@@ -166,6 +176,26 @@ type Rejection struct {
 type PutResult struct {
 	Accepted []string    `cbor:"1,keyasint,omitempty"`
 	Rejected []Rejection `cbor:"2,keyasint,omitempty"`
+}
+
+// Offer lists messages the sender wants to forward to the other node.
+type Offer struct {
+	Items []OfferItem `cbor:"1,keyasint,omitempty"`
+}
+
+// OfferItem describes one offered message, so the receiver can decide
+// without fetching it.
+type OfferItem struct {
+	ID   string `cbor:"1,keyasint"`
+	Kind string `cbor:"2,keyasint"`
+	To   string `cbor:"3,keyasint"`
+	Size int    `cbor:"4,keyasint,omitempty"`
+}
+
+// Want answers an Offer with the IDs the receiver does not have yet.
+// Offered IDs that are not wanted are already there (or were refused).
+type Want struct {
+	IDs []string `cbor:"1,keyasint,omitempty"`
 }
 
 // Error is a fatal error.

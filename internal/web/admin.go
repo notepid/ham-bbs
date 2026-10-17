@@ -35,6 +35,8 @@ func NewAdmin(srv *bbs.Server, log *slog.Logger) http.Handler {
 	mux.HandleFunc("GET /messages", a.messages)
 	mux.HandleFunc("GET /messages/{id}", a.message)
 	mux.HandleFunc("POST /messages/{id}/delete", a.deleteMessage)
+	mux.HandleFunc("GET /neighbors", a.neighbors)
+	mux.HandleFunc("POST /neighbors/{node}/forward", a.forwardNow)
 
 	var h http.Handler = sameOrigin(mux)
 	if hash := srv.Config().Admin.PasswordHash; hash != "" {
@@ -151,6 +153,24 @@ func (a *Admin) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	redirect(w, r, "/users", "Deleted "+call+".")
+}
+
+func (a *Admin) neighbors(w http.ResponseWriter, r *http.Request) {
+	held, err := a.srv.Held()
+	p := a.page(r, "Neighbours", "nbrs", map[string]any{"Neighbors": a.srv.Neighbors(), "Held": held})
+	if err != nil {
+		p.Error = err.Error()
+	}
+	a.r.render(w, "neighbors", p)
+}
+
+func (a *Admin) forwardNow(w http.ResponseWriter, r *http.Request) {
+	node := r.PathValue("node")
+	if err := a.srv.ForwardInBackground(node); err != nil {
+		redirect(w, r, "/neighbors", err.Error())
+		return
+	}
+	redirect(w, r, "/neighbors", "Calling "+node+"; reload to see the result.")
 }
 
 func (a *Admin) messages(w http.ResponseWriter, r *http.Request) {

@@ -64,6 +64,15 @@ var funcs = template.FuncMap{
 	},
 	"lower":    strings.ToLower,
 	"addrname": func(to string) string { n, _, _ := strings.Cut(to, "@"); return n },
+	// replyto addresses a reply: the author's home node is the message's
+	// origin, which needs naming when it is not the user's own BBS (the
+	// last node in the path).
+	"replyto": func(from, origin string, path []string) string {
+		if origin == "" || len(path) == 0 || origin == path[len(path)-1] {
+			return from
+		}
+		return from + "@" + origin
+	},
 }
 
 // renderer holds one parsed template per page, each combined with the

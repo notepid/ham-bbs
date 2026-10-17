@@ -16,20 +16,21 @@ import (
 
 // Server is hambbs.toml.
 type Server struct {
-	Callsign         string   `toml:"callsign"`
-	Node             string   `toml:"node"`
-	Name             string   `toml:"name"`
-	MOTD             string   `toml:"motd"`
-	DataDir          string   `toml:"data_dir"`
-	OpenRegistration bool     `toml:"open_registration"`
-	BulletinDays     int      `toml:"bulletin_days"`
-	MaxMessageBytes  int      `toml:"max_message_bytes"`
-	SyncLimit        int      `toml:"sync_limit"`
-	TCP              TCP      `toml:"tcp"`
-	VARA             VARA     `toml:"vara"`
-	AX25             AX25     `toml:"ax25"`
-	Admin            Admin    `toml:"admin"`
-	Areas            []string `toml:"areas"`
+	Callsign         string     `toml:"callsign"`
+	Node             string     `toml:"node"`
+	Name             string     `toml:"name"`
+	MOTD             string     `toml:"motd"`
+	DataDir          string     `toml:"data_dir"`
+	OpenRegistration bool       `toml:"open_registration"`
+	BulletinDays     int        `toml:"bulletin_days"`
+	MaxMessageBytes  int        `toml:"max_message_bytes"`
+	SyncLimit        int        `toml:"sync_limit"`
+	TCP              TCP        `toml:"tcp"`
+	VARA             VARA       `toml:"vara"`
+	AX25             AX25       `toml:"ax25"`
+	Admin            Admin      `toml:"admin"`
+	Areas            []string   `toml:"areas"`
+	Neighbors        []Neighbor `toml:"neighbor"`
 
 	path string
 }
@@ -53,6 +54,31 @@ type AX25 struct {
 	Addr    string   `toml:"addr"`
 	Port    int      `toml:"port"`
 	MyCalls []string `toml:"mycalls"`
+}
+
+// Neighbor is another BBS this node forwards messages with. Both nodes
+// list each other with the same password.
+type Neighbor struct {
+	Node     string `toml:"node"`     // their node name
+	Call     string `toml:"call"`     // their callsign; default: node
+	Password string `toml:"password"` // link password, the same on both nodes
+	// Connect says how to reach them: "tcp:host:port", "ax25:CALL [via
+	// DIGI,...]" or "vara:CALL". Empty: we never call, they call us.
+	Connect  string `toml:"connect"`
+	Interval int    `toml:"interval"` // minutes between calls; 0 = only "Forward now"
+	// Routes are the nodes whose personal mail goes via this neighbour,
+	// with * as wildcard ("*" = everything without a better route). Their
+	// own node name is always included.
+	Routes []string `toml:"routes"`
+	// Scopes are the bulletin scopes (AREA@SCOPE) sent to them; "*" = all.
+	// Bulletins without a scope stay on this BBS.
+	Scopes []string `toml:"scopes"`
+}
+
+// ConnectKind splits Connect into transport and target.
+func (n Neighbor) ConnectKind() (kind, target string) {
+	kind, target, _ = strings.Cut(n.Connect, ":")
+	return strings.ToLower(strings.TrimSpace(kind)), strings.TrimSpace(target)
 }
 
 type Admin struct {
@@ -97,10 +123,66 @@ func LoadServer(path string) (Server, error) {
 	if len(c.VARA.MyCalls) == 0 {
 		c.VARA.MyCalls = []string{c.Callsign}
 	}
+	if err := c.normalizeNeighbors(); err != nil {
+		return c, err
+	}
 	if len(c.AX25.MyCalls) == 0 {
 		c.AX25.MyCalls = []string{c.Callsign}
 	}
 	return c, nil
+}
+
+// Normalize applies defaults to the neighbour list and checks it.
+// LoadServer calls it; programs that build a Server by hand can too.
+func (c *Server) Normalize() error { return c.normalizeNeighbors() }
+
+func (c *Server) normalizeNeighbors() error {
+	seen := map[string]bool{}
+	for i := range c.Neighbors {
+		n := &c.Neighbors[i]
+		n.Node = strings.ToUpper(strings.TrimSpace(n.Node))
+		n.Call = strings.ToUpper(strings.TrimSpace(n.Call))
+		if n.Node == "" {
+			return fmt.Errorf("neighbor %d: node is not set", i+1)
+		}
+		if n.Node == c.Node {
+			return fmt.Errorf("neighbor %s: that is this node's own name", n.Node)
+		}
+		if seen[n.Node] {
+			return fmt.Errorf("neighbor %s is listed twice", n.Node)
+		}
+		seen[n.Node] = true
+		if n.Call == "" {
+			n.Call = n.Node
+		}
+		if n.Password == "" {
+			return fmt.Errorf("neighbor %s: password is not set (use the same one on both nodes)", n.Node)
+		}
+		if n.Connect != "" {
+			switch kind, target := n.ConnectKind(); {
+			case kind != "tcp" && kind != "ax25" && kind != "vara":
+				return fmt.Errorf("neighbor %s: connect %q must start with tcp:, ax25: or vara:", n.Node, n.Connect)
+			case target == "":
+				return fmt.Errorf("neighbor %s: connect %q has no address", n.Node, n.Connect)
+			}
+		}
+		if n.Interval < 0 {
+			return fmt.Errorf("neighbor %s: interval must be 0 or more minutes", n.Node)
+		}
+		if len(n.Routes) == 0 {
+			n.Routes = nil
+		}
+		for j := range n.Routes {
+			n.Routes[j] = strings.ToUpper(strings.TrimSpace(n.Routes[j]))
+		}
+		if n.Scopes == nil {
+			n.Scopes = []string{"*"}
+		}
+		for j := range n.Scopes {
+			n.Scopes[j] = strings.ToUpper(strings.TrimSpace(n.Scopes[j]))
+		}
+	}
+	return nil
 }
 
 // DataPath resolves a file inside data_dir, relative to the config file.
@@ -168,7 +250,27 @@ mycalls = [{{range $i, $a := .AX25.MyCalls}}{{if $i}}, {{end}}{{printf "%q" $a}}
 listen = {{printf "%q" .Admin.Listen}}
 # bcrypt hash; set with: hambbs-server -set-admin-password
 password_hash = {{printf "%q" .Admin.PasswordHash}}
-`))
+
+# Neighbour BBSes to forward messages with (see docs/setup.md). Example:
+#
+# [[neighbor]]
+# node = "LA9BBS"                    # their node name
+# call = "LA9ABC"                    # their callsign (default: node)
+# password = "shared secret"         # the same on both nodes
+# connect = "ax25:LA9ABC-1"          # or "tcp:host:6300", "vara:LA9ABC"; empty = they call us
+# interval = 60                      # minutes between calls (0 = only "Forward now")
+# routes = ["*"]                     # personal mail for these nodes goes via them
+# scopes = ["*"]                     # bulletin scopes sent to them
+{{range .Neighbors}}
+[[neighbor]]
+node = {{printf "%q" .Node}}
+call = {{printf "%q" .Call}}
+password = {{printf "%q" .Password}}
+connect = {{printf "%q" .Connect}}
+interval = {{.Interval}}
+routes = [{{range $i, $a := .Routes}}{{if $i}}, {{end}}{{printf "%q" $a}}{{end}}]
+scopes = [{{range $i, $a := .Scopes}}{{if $i}}, {{end}}{{printf "%q" $a}}{{end}}]
+{{end}}`))
 
 // SaveServer writes c to path, with comments.
 func SaveServer(path string, c Server) error {

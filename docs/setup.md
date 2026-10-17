@@ -136,6 +136,45 @@ Enter the BBS **callsign** as the address and the TNC's AGWPE port
 Anyone with a plain packet terminal can also connect and use the BBS's
 text commands. See [ax25.md](ax25.md) for the interface details.
 
+## Forwarding between BBS nodes
+
+BBS nodes can exchange bulletins and personal mail with their neighbours.
+Each pair of neighbours lists each other in `hambbs.toml`, with the same
+link password on both sides:
+
+```toml
+[[neighbor]]
+node = "LA9BBS"                # their node name
+call = "LA9ABC"                # their callsign (default: node)
+password = "shared secret"     # the same on both nodes; never sent over the air
+connect = "ax25:LA9ABC-1"      # how to call them; empty = they call us
+interval = 60                  # minutes between calls (0 = only "Forward now")
+routes = ["*"]                 # personal mail for these nodes goes via them
+scopes = ["*"]                 # bulletin scopes they get
+```
+
+* `connect` is `tcp:host:port`, `ax25:CALL [via DIGI,...]` or `vara:CALL`.
+  The AX.25 and VARA transports must be enabled; the BBS calls out through
+  the same TNC or modem it answers on. Over VARA, a call waits until the
+  modem is free.
+* One side calling is enough: a session sends both ways. On a radio link,
+  let one node call and leave `connect` empty on the other.
+* **Bulletins:** posted as `AREA@SCOPE` (for example `TECH@ALL`) they flood
+  to every neighbour whose `scopes` match (`*` = all). A bulletin without a
+  scope stays on the BBS where it was posted.
+* **Personal mail:** users address it as `CALL@NODE`. A neighbour gets
+  mail for its own node name and for nodes matching its `routes` (`*`
+  wildcards allowed, `"*"` alone = default route). Users cannot send to a
+  node without a route. Forwarded mail without a route is shown as *held*
+  on the admin **Neighbours** page and goes out after a matching route is
+  added and the BBS restarted.
+* Messages are de-duplicated by ID and never go back to a node they came
+  through, so loops in the network are harmless.
+
+The admin **Neighbours** page shows queues, last results and errors, and
+has a **Forward now** button. Restart the BBS after changing neighbours.
+The protocol is described in [protocol.md](protocol.md) §7.
+
 ## Legal checklist
 
 * No encryption is used. The protocol is public (`docs/protocol.md`).

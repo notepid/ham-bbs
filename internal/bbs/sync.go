@@ -49,6 +49,10 @@ func (s *Server) serveSync(c transport.Conn, sess *Session, r *bufio.Reader, w *
 		fail(&proto.Error{Code: proto.ErrForbidden, Text: "callsign does not match link address " + lc})
 		return
 	}
+	if h.Node != "" {
+		s.serveForward(c, sess, r, w, nonce, h, call)
+		return
+	}
 	registered, perr := s.login(h, call, nonce)
 	if perr != nil {
 		s.event("sync login failed for %s via %s: %s", call, c.Kind(), perr.Text)
@@ -130,7 +134,7 @@ func (s *Server) handlePut(call string, p proto.Put) proto.PutResult {
 			res.Rejected = append(res.Rejected, proto.Rejection{ID: m.ID, Reason: err.Error()})
 			continue
 		}
-		if _, dup, err := s.store.AddMessage(nm); err != nil {
+		if _, dup, err := s.storeMessage(nm); err != nil {
 			res.Rejected = append(res.Rejected, proto.Rejection{ID: m.ID, Reason: "database error"})
 			continue
 		} else if !dup {
@@ -180,7 +184,7 @@ func (s *Server) handleGet(call string, g proto.Get) proto.Messages {
 			break
 		}
 		m, err := s.store.MessageByID(id)
-		if err != nil || !canSee(call, m.Message) {
+		if err != nil || !s.canSee(call, m.Message) {
 			continue
 		}
 		out.Messages = append(out.Messages, m.Message)

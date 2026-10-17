@@ -274,7 +274,7 @@ func (t *terminal) lookup(arg string) (store.Message, bool) {
 		return store.Message{}, false
 	}
 	m, err := t.srv.store.MessageBySeq(n)
-	if err != nil || !canSee(t.call, m.Message) {
+	if err != nil || !t.srv.canSee(t.call, m.Message) {
 		t.printf("No message %d.%s", n, t.nl)
 		return store.Message{}, false
 	}
@@ -354,7 +354,7 @@ func (t *terminal) send(kind, to string) {
 		t.println("Not stored: " + err.Error())
 		return
 	}
-	seq, _, err := t.srv.store.AddMessage(nm)
+	seq, _, err := t.srv.storeMessage(nm)
 	if err != nil {
 		t.println("Not stored: database error.")
 		return

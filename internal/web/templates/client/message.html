@@ -17,10 +17,10 @@
 </div>
 <div class="actions">
   {{if eq $m.Kind "P"}}
-  <a class="button" href="/compose?kind=P&amp;to={{urlquery $m.From}}&amp;subject={{urlquery (printf "Re: %s" $m.Subject)}}">Reply</a>
+  <a class="button" href="/compose?kind=P&amp;to={{urlquery (replyto $m.From $m.Origin $m.Path)}}&amp;subject={{urlquery (printf "Re: %s" $m.Subject)}}">Reply</a>
   {{else}}
-  <a class="button" href="/compose?kind=P&amp;to={{urlquery $m.From}}&amp;subject={{urlquery (printf "Re: %s" $m.Subject)}}">Reply privately</a>
-  <a class="button secondary" href="/compose?kind=B&amp;to={{urlquery (addrname $m.To)}}&amp;subject={{urlquery (printf "Re: %s" $m.Subject)}}">Reply in {{addrname $m.To}}</a>
+  <a class="button" href="/compose?kind=P&amp;to={{urlquery (replyto $m.From $m.Origin $m.Path)}}&amp;subject={{urlquery (printf "Re: %s" $m.Subject)}}">Reply privately</a>
+  <a class="button secondary" href="/compose?kind=B&amp;to={{urlquery $m.To}}&amp;subject={{urlquery (printf "Re: %s" $m.Subject)}}">Reply in {{$m.To}}</a>
   {{end}}
   <form method="post" action="/msg/{{$m.ID}}/unread" class="inline"><button class="secondary">Mark unread</button></form>
 </div>

@@ -69,17 +69,19 @@ keys must be ignored, which allows compatible additions.
 
 | Type | Name      | Dir | Payload |
 |-----:|-----------|-----|---------|
-| 1    | HELLO     | C→S | 1 call (text), 2 version (int), 3 sig (bytes), 4 pubkey (bytes, optional), 5 client (text, optional) |
+| 1    | HELLO     | C→S | 1 call (text), 2 version (int), 3 sig (bytes), 4 pubkey (bytes, optional), 5 client (text, optional), 6 node (text, only for forwarding, §7) |
 | 2    | WELCOME   | S→C | 1 call, 2 node, 3 registered (bool), 4 motd (text) |
 | 3    | SYNC      | C→S | 1 since (int), 2 areas ([text]), 3 fetch_personal (bool), 4 fetch_areas ([text]), 5 after (int, unix s), 6 limit (int) |
 | 4    | HEADERS   | S→C | 1 cursor (int), 2 more (bool), 3 headers ([Message], without body) |
 | 5    | GET       | C→S | 1 ids ([text]) |
 | 6    | PUT       | C→S | 1 messages ([Message]) |
-| 7    | MESSAGES  | S→C | 1 messages ([Message], with body) |
-| 8    | PUTRESULT | S→C | 1 accepted ([text]), 2 rejected ([{1 id, 2 reason}]) |
+| 7    | MESSAGES  | S→C, both in §7 | 1 messages ([Message], with body) |
+| 8    | PUTRESULT | S→C, both in §7 | 1 accepted ([text]), 2 rejected ([{1 id, 2 reason}]) |
 | 9    | END       | both | empty: end of batch, the other side's turn |
 | 10   | BYE       | both | empty: end of batch and of session |
 | 11   | ERROR     | S→C | 1 code (int), 2 text. The server closes after sending it. |
+| 12   | OFFER     | both, §7 | 1 items ([{1 id, 2 kind, 3 to, 4 size}]) |
+| 13   | WANT      | both, §7 | 1 ids ([text]) |
 
 **Message**:
 
@@ -171,7 +173,70 @@ Commands: `L` (new), `LL [n]`, `LM`, `LB [AREA]`, `A`, `R n`, `S CALL`,
 `SB AREA`, `K n`, `I`, `H`, `B`. While writing a message, end the text with
 `/EX` on its own line or with Ctrl-Z, or type `/ABORT` to cancel.
 
-## 6. Versioning
+## 7. Forwarding between nodes
+
+Neighbouring BBS nodes exchange messages over the same connection and
+framing. The calling node sends `#HBBS1` and a HELLO with key 6 `node` set
+to its node name.
+
+### Authentication
+
+Both nodes configure the same **link password**. Each side derives keys
+exactly as in §4, from a callsign and that password:
+
+* The caller signs `HBBS1|<answering node>|<caller's BASECALL>|<nonce>`
+  with the key derived from its own callsign and the link password.
+* The answerer looks up `node` in its neighbour list, checks that `call`
+  is that neighbour's callsign, and verifies the signature with the key
+  derived from that callsign and the link password.
+
+Over AX.25 and VARA, `call` must also match the link callsign. No password
+or key goes over the air.
+
+### Session
+
+Each node keeps a queue per neighbour of messages still to send it. A
+session swaps the queues in at most four transmissions after the banner:
+
+```
+caller:   #HBBS1\r  HELLO(node)  OFFER  END
+answerer: #HBBS1 OK\r  WELCOME  WANT  OFFER  END
+caller:   MESSAGES  WANT  END
+answerer: PUTRESULT  MESSAGES  BYE
+```
+
+* **OFFER** lists up to 100 queued messages: ID, kind, address and body
+  size.
+* **WANT** answers it with the IDs the receiver doesn't have. Offered IDs
+  that are not wanted are already there, or were refused before. The
+  sender removes them from its queue.
+* **MESSAGES** carries the wanted messages, split into frames of about
+  256 kB. **PUTRESULT** acknowledges them; accepted and rejected IDs both
+  leave the sender's queue.
+* The answerer's last MESSAGES are not acknowledged in the session. They
+  stay queued and are offered again next time, when the other side
+  reports it has them. This costs a few bytes then instead of another
+  turnaround now.
+* If the answerer wants nothing and has nothing to offer, it ends its
+  first answer with BYE. If the caller then has nothing to send and wants
+  nothing, it answers with BYE instead of its batch.
+
+### Message handling
+
+* Forwarded messages keep their ID, author, dates and origin. Each node
+  appends its name to `path`. A node never accepts a message whose path
+  already contains it, and never offers a message to a node in its path.
+  Messages are de-duplicated by ID.
+* **Bulletins** are flooded. `AREA` without a scope, or with this node as
+  scope, stays on the BBS. `AREA@SCOPE` goes to every neighbour configured
+  for that scope.
+* **Personal mail** `CALL@NODE` goes to `NODE` if it is a neighbour, else
+  to the neighbour whose routes match `NODE`, else to the default route.
+  Hierarchical addresses (`NODE.REGION...`) are matched on their first
+  label for delivery. A user's post to a node without a route is
+  rejected; forwarded mail without a route is held until one exists.
+
+## 8. Versioning
 
 Additions use new CBOR keys or frame types and keep version 1. Incompatible
 changes increase the number in `HBBS<n>`, `#HBBS<n>` and HELLO.version.

@@ -1,0 +1,29 @@
+{{define "content"}}{{with .Data}}
+<h1>Neighbours</h1>
+<p class="muted">Other BBS nodes this one forwards messages with. Configure them under <code>[[neighbor]]</code> in <code>hambbs.toml</code>; see docs/setup.md.</p>
+<div class="wrap"><table>
+<tr><th>Node</th><th>Connect</th><th>Every</th><th>Queued</th><th>Last OK</th><th class="hide-sm">Sent / received</th><th></th></tr>
+{{range .Neighbors}}
+<tr>
+  <td><b>{{.Node}}</b>{{if ne .Call .Node}} <span class="muted">{{.Call}}</span>{{end}}
+    {{if .Running}} <span class="pill ok">running</span>{{end}}
+    {{if .LastError}}<br><span class="pill bad">error</span> <small>{{.LastError}}</small>{{end}}</td>
+  <td>{{if .Connect}}<code>{{.Connect}}</code>{{else}}<span class="muted">they call us</span>{{end}}</td>
+  <td>{{if and .Connect .Interval}}{{.Interval}} min{{else}}<span class="muted">-</span>{{end}}</td>
+  <td>{{.Queued}}</td>
+  <td>{{date .LastOK}}</td>
+  <td class="hide-sm">{{.Sent}} / {{.Received}}</td>
+  <td>{{if .Connect}}<form method="post" action="/neighbors/{{.Node}}/forward" class="inline"><button class="small"{{if .Running}} disabled{{end}}>Forward now</button></form>{{end}}</td>
+</tr>
+{{else}}<tr><td colspan="7" class="muted">No neighbours configured.</td></tr>{{end}}
+</table></div>
+
+<h2>Held mail</h2>
+{{if .Held}}
+<p class="muted">Personal mail for nodes no neighbour routes to. It is sent once a matching <code>routes</code> entry exists (after a restart).</p>
+<div class="wrap"><table>
+<tr><th>To</th><th>From</th><th>Subject</th><th class="hide-sm">Path</th></tr>
+{{range .Held}}<tr><td>{{.To}}</td><td>{{.From}}</td><td><a href="/messages/{{.ID}}">{{.Subject}}</a></td><td class="hide-sm">{{join .Path " → "}}</td></tr>{{end}}
+</table></div>
+{{else}}<p class="muted">None.</p>{{end}}
+{{end}}{{end}}

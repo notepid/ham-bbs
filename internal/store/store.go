@@ -23,7 +23,13 @@ var ErrNotFound = errors.New("not found")
 // Store is an open database.
 type Store struct {
 	db *sql.DB
+	// localNode is set on a server. Personal mail addressed to another
+	// node is then in transit and not shown to local users.
+	localNode string
 }
+
+// SetLocalNode tells the store which node it belongs to (server only).
+func (s *Store) SetLocalNode(node string) { s.localNode = node }
 
 const schema = `
 CREATE TABLE IF NOT EXISTS users (
@@ -98,7 +104,7 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
-	if _, err := db.Exec(schema); err != nil {
+	if _, err := db.Exec(schema + forwardSchema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("init schema: %w", err)
 	}
@@ -112,7 +118,7 @@ func OpenMemory() (*Store, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
-	if _, err := db.Exec(schema); err != nil {
+	if _, err := db.Exec(schema + forwardSchema); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -276,6 +282,9 @@ func (s *Store) DeleteMessage(id string) error {
 	if _, err := s.db.Exec(`DELETE FROM reads WHERE id = ?`, id); err != nil {
 		return err
 	}
+	if _, err := s.db.Exec(`DELETE FROM fwdq WHERE id = ?`, id); err != nil {
+		return err
+	}
 	return s.exec1(`DELETE FROM messages WHERE id = ?`, id)
 }
 
@@ -286,6 +295,7 @@ func (s *Store) PurgeExpired(now time.Time) (int64, error) {
 		return 0, err
 	}
 	s.db.Exec(`DELETE FROM reads WHERE id NOT IN (SELECT id FROM messages)`)
+	s.cleanForward(now)
 	return res.RowsAffected()
 }
 
@@ -293,7 +303,7 @@ func (s *Store) PurgeExpired(now time.Time) (int64, error) {
 // first, at most limit. cursor is the value the client should send as
 // since next time.
 func (s *Store) SyncQuery(call string, since, after int64, areas []string, limit int) (msgs []Message, cursor int64, more bool, err error) {
-	where, args := visibleWhere(call, areas, false)
+	where, args := s.visibleWhere(call, areas, false)
 	q := `SELECT ` + msgCols + ` FROM messages WHERE seq > ? AND created > ? AND (expires = 0 OR expires > ?) AND ` + where +
 		` ORDER BY seq LIMIT ?`
 	args = append([]any{since, after, time.Now().Unix()}, args...)
@@ -329,7 +339,7 @@ func (s *Store) SyncQuery(call string, since, after int64, areas []string, limit
 	return msgs, cursor, false, nil
 }
 
-func visibleWhere(call string, areas []string, includeSent bool) (string, []any) {
+func (s *Store) visibleWhere(call string, areas []string, includeSent bool) (string, []any) {
 	b := `(kind = 'B'`
 	var args []any
 	if len(areas) > 0 {
@@ -342,10 +352,19 @@ func visibleWhere(call string, areas []string, includeSent bool) (string, []any)
 	if call == "" {
 		return b, args
 	}
+	mine, margs := s.addressedTo(call)
 	if includeSent {
-		return `((kind = 'P' AND (to_name = ? OR from_call = ?)) OR ` + b + `)`, append([]any{call, call}, args...)
+		return `((kind = 'P' AND (` + mine + ` OR from_call = ?)) OR ` + b + `)`, append(append(margs, call), args...)
 	}
-	return `((kind = 'P' AND to_name = ?) OR ` + b + `)`, append([]any{call}, args...)
+	return `((kind = 'P' AND ` + mine + `) OR ` + b + `)`, append(margs, args...)
+}
+
+// addressedTo matches personal mail delivered to call on this node.
+func (s *Store) addressedTo(call string) (string, []any) {
+	if s.localNode == "" {
+		return `to_name = ?`, []any{call}
+	}
+	return `(to_name = ? AND to_at IN ('', ?))`, []any{call, s.localNode}
 }
 
 // ListFilter selects messages for listings.
@@ -364,10 +383,11 @@ func (s *Store) ListMessages(f ListFilter) ([]Message, error) {
 	var args []any
 	if f.Call != "" {
 		if f.Mine {
-			conds = append(conds, `kind = 'P' AND to_name = ?`)
-			args = append(args, f.Call)
+			w, a := s.addressedTo(f.Call)
+			conds = append(conds, `kind = 'P' AND `+w)
+			args = append(args, a...)
 		} else {
-			w, a := visibleWhere(f.Call, nil, true)
+			w, a := s.visibleWhere(f.Call, nil, true)
 			conds = append(conds, w)
 			args = append(args, a...)
 		}

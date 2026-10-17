@@ -24,7 +24,7 @@ A modern, easy-to-run bulletin board and message system for amateur radio.
 | 1 | Core over TCP: store, sync protocol, terminal mode, admin UI, client UI | **done** |
 | 2a | Radio: VARA modems (VARA FM/HF, VardeFM) | **done** (tested with mock modem) |
 | 2b | Radio: AX.25 via Direwolf/AGWPE (VHF/UHF) | **done** (tested with mock TNC) |
-| 3 | Forwarding between nodes (bulletin flooding, mail routing) | planned |
+| 3 | Forwarding between nodes (bulletin flooding, mail routing) | **done** |
 | 4 | VARA/ARDOP/FreeDATA, FBB/B2F gateway, message signatures | later |
 
 ## Download

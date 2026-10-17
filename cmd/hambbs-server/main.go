@@ -107,7 +107,7 @@ func run(cfgPath string, initCfg, setPW bool, log *slog.Logger) error {
 	defer stop()
 
 	srv := bbs.New(cfg, st, log)
-	go srv.Run(ctx)
+	srv.SetDialer("tcp", tcp.Dialer{})
 
 	log.Info("HamBBS starting", "version", buildinfo.String(), "callsign", cfg.Callsign, "node", cfg.Node, "db", dbPath)
 	if cfg.TCP.Enabled {
@@ -129,6 +129,7 @@ func run(cfgPath string, initCfg, setPW bool, log *slog.Logger) error {
 			return err
 		}
 		defer l.Close()
+		srv.SetDialer("vara", l)
 		go func() {
 			if err := srv.Serve(l); err != nil && ctx.Err() == nil {
 				log.Error("vara listener stopped", "err", err)
@@ -142,12 +143,21 @@ func run(cfgPath string, initCfg, setPW bool, log *slog.Logger) error {
 			return err
 		}
 		defer l.Close()
+		srv.SetDialer("ax25", l)
 		go func() {
 			if err := srv.Serve(l); err != nil && ctx.Err() == nil {
 				log.Error("ax25 listener stopped", "err", err)
 			}
 		}()
 	}
+
+	for _, nb := range cfg.Neighbors {
+		switch kind, _ := nb.ConnectKind(); {
+		case kind == "vara" && !cfg.VARA.Enabled, kind == "ax25" && !cfg.AX25.Enabled:
+			log.Warn("neighbor uses a transport that is not enabled", "node", nb.Node, "connect", nb.Connect)
+		}
+	}
+	go srv.Run(ctx) // scheduled forwarding needs the dialers set above
 
 	if cfg.Admin.Listen != "" {
 		if cfg.Admin.PasswordHash == "" && !isLoopback(cfg.Admin.Listen) {
