@@ -16,6 +16,7 @@
     <a href="/compose" {{if eq .Active "compose"}}class="on"{{end}}>Write</a>
     <a href="/outbox" {{if eq .Active "outbox"}}class="on"{{end}}>Outbox{{if .Header.Queued}}<span class="badge">{{.Header.Queued}}</span>{{end}}</a>
     <a href="/settings" {{if eq .Active "settings"}}class="on"{{end}}>Settings</a>
+    <a href="/help" {{if eq .Active "help"}}class="on"{{end}}>Help</a>
   </nav>
   {{if .Header.Configured}}
   <form method="post" action="/sync" class="inline">

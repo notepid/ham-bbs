@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/notepid/ham-bbs/internal/buildinfo"
 	"github.com/notepid/ham-bbs/internal/callsign"
 	"github.com/notepid/ham-bbs/internal/client"
 	"github.com/notepid/ham-bbs/internal/config"
@@ -43,6 +44,7 @@ func NewClientUI(c *client.Client, log *slog.Logger) http.Handler {
 	mux.HandleFunc("POST /sync", u.startSync)
 	mux.HandleFunc("GET /settings", u.settings)
 	mux.HandleFunc("POST /settings", u.saveSettings)
+	mux.HandleFunc("GET /help", u.help)
 	return sameOrigin(mux)
 }
 
@@ -124,6 +126,13 @@ func (u *ClientUI) unread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	redirect(w, r, "/", "")
+}
+
+func (u *ClientUI) help(w http.ResponseWriter, r *http.Request) {
+	cfg := u.c.Config()
+	u.r.render(w, "help", u.page(r, "Help", "help", map[string]string{
+		"Config": cfg.Path(), "DataDir": cfg.DataDir, "Version": buildinfo.String(),
+	}))
 }
 
 func (u *ClientUI) compose(w http.ResponseWriter, r *http.Request) {

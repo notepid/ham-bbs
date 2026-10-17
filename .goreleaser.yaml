@@ -36,19 +36,29 @@ builds:
       - { goos: windows, goarch: arm }
       - { goos: darwin, goarch: arm }
 
+# One archive per program: users only need the client, sysops the server.
 archives:
-  - id: hambbs
-    ids: [hambbs-server, hambbs-client]
+  - id: server
+    ids: [hambbs-server]
     name_template: >-
-      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}
+      hambbs-server_{{ .Version }}_{{ .Os }}_{{ if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}
     formats: [tar.gz]
     format_overrides:
       - goos: windows
         formats: [zip]
-    files:
+    files: &docs
       - LICENSE
       - README.md
       - docs/*.md
+  - id: client
+    ids: [hambbs-client]
+    name_template: >-
+      hambbs-client_{{ .Version }}_{{ .Os }}_{{ if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files: *docs
 
 checksum:
   name_template: checksums.txt
@@ -61,3 +71,10 @@ changelog:
 release:
   draft: false
   prerelease: auto # tags like v0.2.0-rc1 become pre-releases
+  header: |
+    **Users:** download `hambbs-client` for your system. It runs on your computer and opens in the browser.
+    **Sysops:** download `hambbs-server` to run a BBS.
+
+    Linux `armv6` runs on every Raspberry Pi; use `arm64` for a 64-bit Raspberry Pi OS.
+
+    **Updating:** stop the program, replace the program file and start it again. Settings and messages are kept. See [Updating](https://github.com/notepid/ham-bbs/blob/main/docs/setup.md#updating).

@@ -1,0 +1,107 @@
+{{define "content"}}
+<h1>Help</h1>
+<nav class="toc panel">
+  <a href="#start">How it works</a>
+  <a href="#kinds">Personal messages and bulletins</a>
+  <a href="#address">Addressing</a>
+  <a href="#reading">Reading and fetching</a>
+  <a href="#outbox">The outbox</a>
+  <a href="#account">Your account</a>
+  <a href="#radio">On the air</a>
+  <a href="#update">Updating</a>
+</nav>
+
+<h2 id="start">How it works</h2>
+<div class="panel">
+  <p>HamBBS works like e-mail for radio amateurs. Your messages live on a BBS, and this program keeps a copy of them on your computer.</p>
+  <p>This program is only connected to the BBS while it <b>syncs</b>. Everything else works offline:</p>
+  <ol>
+    <li><b>Write</b> a message. It goes to the <a href="/outbox">Outbox</a>; nothing is sent yet.</li>
+    <li>Press <b>Sync now</b>. In one connection the client sends your outbox and brings home new mail and bulletins.</li>
+    <li>Read at your own pace. Over radio, you never wait for the BBS while you read.</li>
+  </ol>
+  <p class="hint">Nothing happens by itself: press Sync now whenever you want to send or check for new mail. The <a href="/sync">Sync</a> page shows the result of the last sync.</p>
+</div>
+
+<h2 id="kinds">Personal messages and bulletins</h2>
+<div class="wrap"><table>
+<tr><th></th><th>Personal message</th><th>Bulletin</th></tr>
+<tr><th>What it is</th><td>A letter to one station</td><td>A post on a public board, for everyone</td></tr>
+<tr><th>Addressed to</th><td>A callsign, e.g. <code>LA1ABC</code></td><td>An area (topic), e.g. <code>TECH</code> or <code>SALE</code></td></tr>
+<tr><th>Who sees it in the client</th><td>The recipient (and you, the sender)</td><td>Every user of the BBS, and of other BBSes if it is sent network-wide</td></tr>
+<tr><th>Where to find it</th><td><a href="/">Inbox</a></td><td><a href="/bulletins">Bulletins</a></td></tr>
+<tr><th>How long it stays</th><td>On the BBS until the sysop deletes it</td><td>Removed from the BBS after a while (the sysop decides how long, often 30 days)</td></tr>
+</table></div>
+<p class="hint">"Personal" does not mean secret. Over radio anyone can listen, and the sysop can read everything on the BBS. See <a href="#radio">On the air</a>.</p>
+
+<h2 id="address">Addressing</h2>
+<div class="panel">
+  <h3>Personal messages</h3>
+  <ul>
+    <li><code>LA1ABC</code>: a user of your own BBS.</li>
+    <li><code>LA1ABC@LA9BBS</code>: a user whose home BBS is <code>LA9BBS</code>. Your BBS forwards the message there, possibly through other BBSes on the way.</li>
+  </ul>
+  <p>You need to know the recipient's home BBS, the one they sync with. Ask them, or look at a message they sent you: the last node in its <b>Path</b> is their home BBS. <b>Reply</b> fills in the right address for you.</p>
+  <p>If your BBS has no route to that node, the message comes back as <b>rejected</b> with the reason "no route". Ask your sysop which BBSes can be reached.</p>
+
+  <h3>Bulletins</h3>
+  <ul>
+    <li><code>TECH</code>: the TECH area on your own BBS only.</li>
+    <li><code>TECH@ALL</code>: TECH on every BBS in the network.</li>
+    <li><code>TECH@LA</code>, <code>TECH@EU</code>…: TECH on BBSes that carry that region. Which regions exist depends on how the sysops have connected their BBSes.</li>
+  </ul>
+  <p>Use an existing area if one fits; the Write page suggests the areas you have seen. Choose the smallest audience that makes sense: a network-wide bulletin goes over the air from every BBS to the next.</p>
+</div>
+
+<h2 id="reading">Reading and fetching</h2>
+<div class="panel">
+  <p>To save airtime, a sync can bring only the <b>header</b> of a message: sender, subject and size. Such messages are marked <span class="pill">header only</span>.</p>
+  <ul>
+    <li>Open the message and press <b>Fetch text on next sync</b>. The text arrives with your next sync.</li>
+    <li>In <a href="/settings">Settings</a> you choose what always comes in full: personal mail, and bulletins in the areas you list under "Always fetch full text".</li>
+    <li>"Bulletin areas to follow" limits which bulletins you hear about at all.</li>
+  </ul>
+  <p>On a personal message, <b>Reply</b> answers the sender. On a bulletin you can <b>reply privately</b> to the author, or <b>reply in the area</b> so everyone sees it.</p>
+  <p class="hint">Unread messages are shown in bold. Use <b>Mark unread</b> to keep a message for later.</p>
+</div>
+
+<h2 id="outbox">The outbox</h2>
+<div class="panel">
+  <ul>
+    <li><span class="pill">queued</span>: waiting for the next sync. You can still remove it.</li>
+    <li><span class="pill ok">sent</span>: the BBS has accepted it. From there, the BBS forwards it to other BBSes if needed. That can take a while, because BBSes call each other only every so often.</li>
+    <li><span class="pill bad">rejected</span>: the BBS refused it. The reason is shown below the subject. Fix the problem, write the message again, and remove the rejected one.</li>
+  </ul>
+</div>
+
+<h2 id="account">Your account</h2>
+<div class="panel">
+  <p>Your account on the BBS is your callsign and a password. On most BBSes, new users just choose a password in Settings, and the first sync creates the account. Some sysops add users by hand instead.</p>
+  <p>The password itself never leaves this computer. The client proves that you know it with a signature that is only valid for that one connection.</p>
+  <p>If you forget your password, ask the sysop to reset it. Then enter the new one in Settings.</p>
+  <p class="hint">Without the client, you can also connect with an ordinary packet or telnet terminal. Type <code>H</code> for the list of commands.</p>
+</div>
+
+<h2 id="radio">On the air</h2>
+<div class="panel">
+  <ul>
+    <li><b>Everything is public.</b> Amateur radio rules forbid encryption and anything that hides the meaning. Personal mail is readable by anyone who listens.</li>
+    <li><b>No business</b> and nothing you would not say on the air.</li>
+    <li>You are responsible for what is sent under your callsign.</li>
+    <li><b>Keep it short</b> on slow links. A 1200 baud packet link moves roughly 100 bytes per second, so a long letter or a big list of always-fetched areas makes every sync slow.</li>
+    <li>Plain text only. There are no attachments.</li>
+  </ul>
+</div>
+
+<h2 id="update">Updating this program</h2>
+<div class="panel">
+  <p>New versions are on the <a href="https://github.com/notepid/ham-bbs/releases" target="_blank" rel="noopener">Releases</a> page; download <code>hambbs-client</code> for your system.</p>
+  <ol>
+    <li>Close this program: press Ctrl+C in its window, or close the window.</li>
+    <li>Replace <code>hambbs-client</code> (<code>hambbs-client.exe</code> on Windows) with the new one, in the same folder.</li>
+    <li>Start it again.</li>
+  </ol>
+  <p>Your settings (<code>{{.Data.Config}}</code>) and the <code>{{.Data.DataDir}}</code> folder with your messages and outbox are kept. You don't need to update at the same time as your BBS.</p>
+  <p class="hint">You are running version {{.Data.Version}}.</p>
+</div>
+{{end}}

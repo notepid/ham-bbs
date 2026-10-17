@@ -31,7 +31,11 @@ A modern, easy-to-run bulletin board and message system for amateur radio.
 
 Prebuilt binaries for Linux (x86-64, ARM64, ARMv6 for every Raspberry Pi),
 Windows and macOS are on the [Releases](https://github.com/notepid/ham-bbs/releases) page.
-Each archive contains both `hambbs-server` and `hambbs-client`.
+Users download `hambbs-client_<version>_<system>`, sysops
+`hambbs-server_<version>_<system>`. Both come from the same release and
+always share a version. To update, replace the program file and keep
+its configuration and data folder; see
+[docs/setup.md](docs/setup.md#updating).
 
 With Go installed you can also run:
 

@@ -175,6 +175,54 @@ The admin **Neighbours** page shows queues, last results and errors, and
 has a **Forward now** button. Restart the BBS after changing neighbours.
 The protocol is described in [protocol.md](protocol.md) §7.
 
+## Updating
+
+The program files hold no data. Settings and messages live in files next
+to them, so updating means replacing the program and keeping everything
+else. Releases are on the
+[Releases](https://github.com/notepid/ham-bbs/releases) page.
+
+### Server
+
+1. Download the new `hambbs-server` archive for your system.
+2. Stop the server: `sudo systemctl stop hambbs`, stop the scheduled task,
+   or press Ctrl+C in its window.
+3. Back up `hambbs.toml` and the `data` folder.
+4. Replace `hambbs-server` (`hambbs-server.exe`) with the new one. Leave
+   `hambbs.toml` and `data` where they are.
+5. Start the server again. It updates the database by itself on start.
+   `hambbs-server -version` shows the version you are running.
+
+On Linux with the systemd setup above:
+
+```
+sudo systemctl stop hambbs
+sudo cp -a /opt/hambbs/data /opt/hambbs/data.bak
+sudo tar -xzf hambbs-server_*_linux_arm64.tar.gz -C /opt/hambbs hambbs-server
+sudo systemctl start hambbs
+```
+
+### Client
+
+1. Download the new `hambbs-client` archive for your system.
+2. Close the client: press Ctrl+C in its window, or close the window.
+3. Replace `hambbs-client` (`hambbs-client.exe`) with the new one, in the
+   same folder. `hambbs-client.toml` and the `client-data` folder (your
+   messages and outbox) stay as they are.
+4. Start it again.
+
+### Good to know
+
+* Clients and servers of different versions work together as long as they
+  speak the same protocol version (currently 1). Users and neighbouring
+  BBSes don't have to update at the same time as you.
+* Settings that are new in a release get their default value if they are
+  missing from your configuration file. The release notes say when one is
+  worth setting.
+* To go back to an older version, stop the program, put back the old
+  program file, and restore your backup. An older version may not
+  understand data written by a newer one.
+
 ## Legal checklist
 
 * No encryption is used. The protocol is public (`docs/protocol.md`).

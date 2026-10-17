@@ -29,6 +29,11 @@ nav a.on:hover { background: var(--accent); }
 main { max-width: 1000px; margin: 0 auto; padding: 18px 16px 48px; }
 h1 { font-size: 22px; margin: 0 0 14px; }
 h2 { font-size: 17px; margin: 24px 0 8px; }
+h3 { font-size: 15px; margin: 14px 0 6px; }
+h3:first-child { margin-top: 0; }
+.toc { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.panel > :first-child { margin-top: 0; }
+.panel > :last-child { margin-bottom: 0; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
 .flash { border-left: 4px solid var(--ok); }
 .error { border-left: 4px solid var(--danger); }
